@@ -1,0 +1,13 @@
+{
+  "entryPointStrategy": "packages",
+  "entryPoints": [
+    "packages/sdk",
+    "packages/ui",
+    "packages/ui-react",
+    "packages/protocol"
+  ],
+  "excludeInternal": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "tsconfig": "tsconfig.base.json"
+}
