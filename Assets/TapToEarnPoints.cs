@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Networking; // إضافة لتفعيل الاتصال بـ Telegram Bot
 
 public class TapToEarnPoints : MonoBehaviour
 {
@@ -31,17 +32,18 @@ public class TapToEarnPoints : MonoBehaviour
     public GameObject panelInvite;
     public GameObject backButton;
 
-    public string telegramInviteLink = "https://t.me/twq_coin";
-    public string twitterInviteLink = "https://x.com/Twq_coin?t=GCEYsN0o6ymexvRu9hUD6A&s=09";
-    public string youtubeInviteLink = "https://www.youtube.com/@Twq_coinz";
+    public string telegramInviteLink = "https://t.me/gulab_coin";
+    public string twitterInviteLink = "https://x.com/Gulab_coin?t=kp0IHdtS8V6Hm1BnnK1mpg&s=35";
+    public string youtubeInviteLink = "https://www.youtube.com/@Gulab_coin";
+
+    public string sandLink = "https://example.com/sandlink?ref="; // رابط Sand مع إضافة معرّف الإحالة
+    public string copiLink = "https://example.com/copilink?ref="; // رابط Copi مع إضافة معرّف الإحالة
 
     private DateTime firstLoginDate;
     private string walletAddress;
 
     private bool isTaskCompleted = false; // حالة إتمام المهمة
 
-    public Slider pointsSlider;
-    public Image sliderFillImage;
 
     public Image playerImage;
     public TMP_Text playerNameText;
@@ -72,6 +74,19 @@ public class TapToEarnPoints : MonoBehaviour
     private float savedMiningStartTime;
     private bool savedIsMining;
 
+    // إضافة هيكل بيانات للاعبين المحالين مع الصورة
+    private List<ReferralPlayer> referralPlayers = new List<ReferralPlayer>(); // قائمة اللاعبين المحالين
+    [System.Serializable]
+    public class ReferralPlayer
+    {
+        public string playerID;
+        public string playerName;
+        public Sprite playerAvatar;
+    }
+
+    public GameObject referralItemPrefab;  // قالب العنصر الذي سيتم تكراره في القائمة
+    public Transform referralListContainer; // المكان الذي سيتم فيه عرض القائمة
+
     void Start()
     {
         playerID = PlayerPrefs.GetString("PlayerID", "");
@@ -81,9 +96,6 @@ public class TapToEarnPoints : MonoBehaviour
             playerID = Guid.NewGuid().ToString();
             PlayerPrefs.SetString("PlayerID", playerID);
         }
-
-        pointsSlider.value = 0f;  
-        sliderFillImage.fillAmount = pointsSlider.value / 100f;
 
         ShowPanel1();
         ApplyDailyReward();
@@ -96,13 +108,14 @@ public class TapToEarnPoints : MonoBehaviour
         referralCount = PlayerPrefs.GetInt("ReferralCount", 0); 
         UpdateReferralCountText(); 
 
-        UpdatePlayerInfo(Resources.Load<Sprite>("DefaultAvatar"), "Player1");
+        // تحديث بيانات اللاعب
+        UpdatePlayerInfo();
 
         leaderboardPanel.SetActive(false);
 
         // استعادة حالة التعدين إذا كانت موجودة
         savedMiningStartTime = PlayerPrefs.GetFloat("MiningStartTime", 0);
-        savedIsMining = PlayerPrefs.GetInt("IsMining", 0) == 1; // تعديل هنا لاسترجاع الحالة كـ bool
+        savedIsMining = PlayerPrefs.GetInt("IsMining", 0) == 1;
 
         if (savedIsMining)
         {
@@ -111,13 +124,66 @@ public class TapToEarnPoints : MonoBehaviour
             StartCoroutine(MiningCountdown());
         }
     }
+    
+    // دالة لتحديث بيانات اللاعب في واجهة اللعبة
+    void UpdatePlayerInfo()
+    {
+        // استرجاع الصورة والاسم من PlayerPrefs
+        string savedPlayerName = PlayerPrefs.GetString("PlayerName", "Player1");
+        string savedPlayerImage = PlayerPrefs.GetString("PlayerImage", "DefaultAvatar");
+
+        Sprite playerAvatar = Resources.Load<Sprite>(savedPlayerImage);
+
+        // إذا كانت الصورة غير موجودة، استخدم الصورة الافتراضية
+        if (playerAvatar == null)
+        {
+            playerAvatar = Resources.Load<Sprite>("DefaultAvatar");
+        }
+
+        playerImage.sprite = playerAvatar;
+        playerNameText.text = savedPlayerName;
+    }
+
+    // دالة لتعيين الصورة والاسم عند الدخول لأول مرة
+    public void SetPlayerInfo(Sprite avatar, string playerName)
+    {
+        // تخزين الصورة والاسم في PlayerPrefs
+        PlayerPrefs.SetString("PlayerName", playerName);
+        PlayerPrefs.SetString("PlayerImage", avatar.name); // الاسم الافتراضي للصورة في Resources
+
+        // تحديث الواجهة
+        playerImage.sprite = avatar;
+        playerNameText.text = playerName;
+    }
 
     // دالة لزيادة عدد المدعوين
-    public void IncreaseReferralCount()
+    public void IncreaseReferralCount(string referredPlayerID, string playerName, Sprite playerAvatar)
     {
-        referralCount++;
-        PlayerPrefs.SetInt("ReferralCount", referralCount); // تخزين العدد في PlayerPrefs
-        UpdateReferralCountText(); // تحديث النص لعرض العدد الجديد
+        referralPlayers.Add(new ReferralPlayer { playerID = referredPlayerID, playerName = playerName, playerAvatar = playerAvatar });
+        PlayerPrefs.SetInt("ReferralCount", referralPlayers.Count); // تخزين عدد المدعوين في PlayerPrefs
+        ShowReferralList(); // تحديث عرض المحالين
+    }
+
+    // دالة لعرض قائمة المحالين في واجهة المستخدم
+    public void ShowReferralList()
+    {
+        // مسح العناصر القديمة من القائمة
+        foreach (Transform child in referralListContainer)
+        {
+            Destroy(child.gameObject);
+        }
+
+        // إضافة العناصر الجديدة إلى القائمة
+        foreach (ReferralPlayer referral in referralPlayers)
+        {
+            GameObject referralItem = Instantiate(referralItemPrefab, referralListContainer);
+            TMP_Text playerNameText = referralItem.GetComponentInChildren<TMP_Text>();
+            Image playerAvatarImage = referralItem.GetComponentInChildren<Image>();
+
+            // تحديث النص والصورة في العنصر
+            playerNameText.text = referral.playerName;
+            playerAvatarImage.sprite = referral.playerAvatar;
+        }
     }
 
     // دالة لتحديث النص الذي يعرض عدد المدعوين
@@ -130,10 +196,17 @@ public class TapToEarnPoints : MonoBehaviour
     {
         string todayDate = DateTime.Now.ToString("yyyy-MM-dd");
 
-        if (!PlayerPrefs.HasKey("LastLoginDate") || PlayerPrefs.GetString("LastLoginDate") != todayDate)
+        // التحقق مما إذا كان اليوم هو أول دخول في هذا اليوم
+        if (!PlayerPrefs.HasKey("LastLoginDate") && PlayerPrefs.GetString("LastLoginDate") != todayDate)
         {
             PlayerPrefs.SetString("LastLoginDate", todayDate);
-            AddPoints(miningPoints); // إضافة نقاط التعدين اليومية
+
+            // تحقق من عدم عرض مكافأة الدخول بعد
+            if (!PlayerPrefs.HasKey("DailyRewardClaimed") || PlayerPrefs.GetInt("DailyRewardClaimed") == 0)
+            {
+                AddPoints(miningPoints); // إضافة نقاط التعدين اليومية
+                PlayerPrefs.SetInt("DailyRewardClaimed", 1); // تعيين أنه تم عرض المكافأة
+            }
         }
 
         if (!PlayerPrefs.HasKey("FirstLoginDate"))
@@ -163,7 +236,7 @@ public class TapToEarnPoints : MonoBehaviour
         pointsText.gameObject.SetActive(true);
         UpdatePointsText();
     }
-
+    
     public void StartMining()
     {
         if (!isMining)
@@ -181,8 +254,6 @@ public class TapToEarnPoints : MonoBehaviour
             float miningElapsedTime = Time.time - miningStartTime;
 
             miningProgress = Mathf.Min(miningElapsedTime / miningDurationInSeconds, 1f);
-
-            pointsSlider.value = miningProgress * 100f;
 
             miningProgressText.text = $"Mining: {miningProgress:0.000000}";
 
@@ -232,9 +303,6 @@ public class TapToEarnPoints : MonoBehaviour
             startButtonText.text = "Start"; // إعادة تعيين النص بعد استلام النقاط
             UpdatePointsText();
 
-            // إضافة اللاعب الحالي إلى الترتيب
-            AddPlayerToLeaderboard("Player" + playerID, points);
-
             // إعادة تعيين النقاط المكتسبة من الأنشطة
             totalPoints = 0;
         }
@@ -262,15 +330,13 @@ public class TapToEarnPoints : MonoBehaviour
     {
         HideAllPanels();
         panel1.SetActive(true);
-        backButton.SetActive(false);
     }
 
     public void ShowWallet()
     {
         HideAllPanels();
         walletPanel.SetActive(true);
-        backButton.SetActive(true);
-        walletText.text = string.IsNullOrEmpty(walletAddress) ? "Connect Wallet" : $"Wallet: {walletAddress}";
+        walletText.text = string.IsNullOrEmpty(walletAddress) ? " Wallet" : $"Wallet: {walletAddress}";
     }
 
     public void LinkWallet(string walletInput)
@@ -292,22 +358,40 @@ public class TapToEarnPoints : MonoBehaviour
         walletAddress = PlayerPrefs.GetString("WalletAddress", "");
     }
 
-    public void ShowEarn() { HideAllPanels(); earnPanel.SetActive(true); backButton.SetActive(true); }
-    public void ShowFrens() { HideAllPanels(); frensPanel.SetActive(true); backButton.SetActive(true); }
-    public void ShowIrdrop() { HideAllPanels(); irdropPanel.SetActive(true); backButton.SetActive(true); }
+    public void ShowEarn() 
+    {
+        HideAllPanels(); 
+        earnPanel.SetActive(true);
+    }
 
-    private void HideAllPanels()
+    public void ShowFrens() 
+    {
+        HideAllPanels(); 
+        frensPanel.SetActive(true);
+        ShowReferralList(); // تحديث قائمة المحالين عند عرضها
+    }
+
+    public void ShowIrdrop() 
+    {
+        HideAllPanels(); 
+        irdropPanel.SetActive(true);
+    }
+
+   private void HideAllPanels()
     {
         panel1.SetActive(false);
         earnPanel.SetActive(false);
         frensPanel.SetActive(false);
         walletPanel.SetActive(false);
         irdropPanel.SetActive(false);
-        leaderboardPanel.SetActive(false);
+        panelInvite.SetActive(false);
     }
 
-    public void OnBackButtonPressed() { ShowPanel1(); }
-
+    public void OnBackButtonPressed() 
+    { 
+        ShowPanel1(); 
+    }
+    
     public void ShowInvitePanel()
     {
         panelInvite.SetActive(true);
@@ -318,90 +402,62 @@ public class TapToEarnPoints : MonoBehaviour
         panelInvite.SetActive(false);
     }
 
-    public void CopyInviteLink()
+    public void InviteOnTelegram()
     {
-        string inviteLinkWithID = telegramInviteLink + "?ref=" + playerID;
-        GUIUtility.systemCopyBuffer = inviteLinkWithID;
-        Debug.Log("تم نسخ الرابط: " + inviteLinkWithID);
+        Application.OpenURL(telegramInviteLink);
     }
 
-    public void ShareInviteLink()
+    public void InviteOnTwitter()
     {
-        string inviteLinkWithID = telegramInviteLink + "?ref=" + playerID;
-        string message = "Join me in this awesome game! " + inviteLinkWithID;
-
-        Debug.Log("Invite Link Shared: " + message);
+        Application.OpenURL(twitterInviteLink);
     }
 
-    public void OpenTelegram() { OpenSocialMediaLinks("telegram"); }
-    public void OpenTwitter() { OpenSocialMediaLinks("twitter"); }
-    public void OpenYouTube() { OpenSocialMediaLinks("youtube"); }
-
-    void OpenSocialMediaLinks(string platform)
+    public void InviteOnYoutube()
     {
-        switch (platform)
+        Application.OpenURL(youtubeInviteLink);
+    }
+
+    // دالة لإرسال البيانات إلى البوت
+    public class TelegramBotSender : MonoBehaviour
+    {
+        private string botToken = "7435176224:AAFOiOWghG3p5YJNtTAIubs6GvvAS-3_3SY"; // ضع توكن البوت هنا
+        private string chatId = "@GULAB_COIN"; // ضع الـ chat ID هنا
+
+        public void SendMessageToTelegram(string message)
         {
-            case "telegram":
-                Application.OpenURL(telegramInviteLink);
-                break;
-            case "twitter":
-                Application.OpenURL(twitterInviteLink);
-                break;
-            case "youtube":
-                Application.OpenURL(youtubeInviteLink);
-                break;
+            StartCoroutine(SendMessageCoroutine(message));
+        }
+
+        private System.Collections.IEnumerator SendMessageCoroutine(string message)
+        {
+            string url = $"https://api.telegram.org/bot{botToken}/sendMessage?chat_id={chatId}&text={UnityWebRequest.EscapeURL(message)}";
+            UnityWebRequest request = UnityWebRequest.Get(url);
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                Debug.Log("Message sent to Telegram");
+            }
+            else
+            {
+                Debug.LogError("Failed to send message: " + request.error);
+            }
         }
     }
 
-    // دالة لعرض الترتيب
-    public void ShowLeaderboard()
+    // دالة لنسخ الرابط الخاص باللاعب عند الضغط على sandLink
+    public void CopySandLink()
     {
-        leaderboardPanel.SetActive(true); // عرض لوحة الترتيب
-        UpdateLeaderboard(); // تحديث ترتيب اللاعبين
+        string sandUrl = sandLink + playerID; // إضافة معرّف اللاعب
+        GUIUtility.systemCopyBuffer = sandUrl; // نسخ الرابط إلى الحافظة
+        Debug.Log("Sand link copied: " + sandUrl);
     }
 
-    // دالة لإخفاء الترتيب
-    public void HideLeaderboard()
+    // دالة لنسخ الرابط الخاص باللاعب عند الضغط على copiLink
+    public void CopyCopiLink()
     {
-        leaderboardPanel.SetActive(false); // إخفاء لوحة الترتيب
+        string copiUrl = copiLink + playerID; // إضافة معرّف اللاعب
+        GUIUtility.systemCopyBuffer = copiUrl; // نسخ الرابط إلى الحافظة
+        Debug.Log("Copi link copied: " + copiUrl);
     }
-
-    // دالة لتحديث ترتيب اللاعبين
-    void UpdateLeaderboard()
-    {
-        players.Sort((x, y) => y.playerPoints.CompareTo(x.playerPoints)); // ترتيب اللاعبين بناءً على النقاط بترتيب تنازلي
-
-        leaderboardText.text = "Leaderboard:\n";
-        for (int i = 0; i < players.Count; i++)
-        {
-            leaderboardText.text += $"{i + 1}. {players[i].playerName} - {players[i].playerPoints} Points\n";
-        }
-
-        // هذا هو المكان الصحيح لـ foreach
-        foreach (Player player in players)
-        {
-            leaderboardText.text += $"{player.playerName}: {player.playerPoints}\n";
-        }
-
-        leaderboardPanel.SetActive(true); // عرض لوحة الترتيب
-    }
-
-    // دالة لإضافة لاعب جديد إلى الترتيب
-    public void AddPlayerToLeaderboard(string playerName, int points)
-    {
-        Player newPlayer = new Player
-        {
-            playerName = playerName,
-            playerPoints = points
-        };
-
-        players.Add(newPlayer); // إضافة اللاعب إلى قائمة اللاعبين
-    }
-
-    // دالة لتحديث بيانات اللاعب في واجهة اللعبة
-    void UpdatePlayerInfo(Sprite avatar, string playerName)
-    {
-        playerImage.sprite = avatar;
-        playerNameText.text = playerName;
-    }
-} // قوس إغلاق الكل
+} 
