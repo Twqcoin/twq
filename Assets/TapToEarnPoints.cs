@@ -375,9 +375,7 @@ public class TapToEarnPoints : MonoBehaviour
     {
         HideAllPanels(); 
         irdropPanel.SetActive(true);
-    }
-
-   private void HideAllPanels()
+    }private void HideAllPanels()
     {
         panel1.SetActive(false);
         earnPanel.SetActive(false);
@@ -418,32 +416,45 @@ public class TapToEarnPoints : MonoBehaviour
     }
 
     // دالة لإرسال البيانات إلى البوت
-    public class TelegramBotSender : MonoBehaviour
+    // دالة لإرسال البيانات إلى البوت
+public class TelegramBotSender : MonoBehaviour
+{
+    private string botToken; // تعريف المتغير لتخزين توكن البوت
+    private string chatId = "@GULAB_COIN"; // ضع الـ chat ID هنا
+
+    void Start()
     {
-        private string botToken = "7435176224:AAFOiOWghG3p5YJNtTAIubs6GvvAS-3_3SY"; // ضع توكن البوت هنا
-        private string chatId = "@GULAB_COIN"; // ضع الـ chat ID هنا
+        // الحصول على التوكن من المتغير البيئي
+        botToken = System.Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
 
-        public void SendMessageToTelegram(string message)
+        if (string.IsNullOrEmpty(botToken))
         {
-            StartCoroutine(SendMessageCoroutine(message));
-        }
-
-        private System.Collections.IEnumerator SendMessageCoroutine(string message)
-        {
-            string url = $"https://api.telegram.org/bot{botToken}/sendMessage?chat_id={chatId}&text={UnityWebRequest.EscapeURL(message)}";
-            UnityWebRequest request = UnityWebRequest.Get(url);
-            yield return request.SendWebRequest();
-
-            if (request.result == UnityWebRequest.Result.Success)
-            {
-                Debug.Log("Message sent to Telegram");
-            }
-            else
-            {
-                Debug.LogError("Failed to send message: " + request.error);
-            }
+            Debug.LogError("Telegram Bot Token is missing!");
         }
     }
+
+    public void SendMessageToTelegram(string message)
+    {
+        StartCoroutine(SendMessageCoroutine(message));
+    }
+
+    private System.Collections.IEnumerator SendMessageCoroutine(string message)
+    {
+        string url = $"https://api.telegram.org/bot{botToken}/sendMessage?chat_id={chatId}&text={UnityWebRequest.EscapeURL(message)}";
+        UnityWebRequest request = UnityWebRequest.Get(url);
+        yield return request.SendWebRequest();
+
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+            Debug.Log("Message sent to Telegram");
+        }
+        else
+        {
+            Debug.LogError("Failed to send message: " + request.error);
+        }
+    }
+}
+
 
     // دالة لنسخ الرابط الخاص باللاعب عند الضغط على sandLink
     public void CopySandLink()
@@ -460,4 +471,4 @@ public class TapToEarnPoints : MonoBehaviour
         GUIUtility.systemCopyBuffer = copiUrl; // نسخ الرابط إلى الحافظة
         Debug.Log("Copi link copied: " + copiUrl);
     }
-} 
+}
