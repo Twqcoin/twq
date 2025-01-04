@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en-us">
   <head>
@@ -5,7 +6,8 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | Twoo</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
+    <link <link rel="stylesheet" href="{{ url_for('static', filename='game/TemplateData/style.css') }}">
+
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
@@ -74,7 +76,6 @@
       // happening inside the engine, and you would instead like to size up
       // the canvas DOM size and WebGL render target sizes yourself.
       // config.matchWebGLToCanvasSize = false;
-
       // If you would like all file writes inside Unity Application.persistentDataPath
       // directory to automatically persist so that the contents are remembered when
       // the user revisits the site the next time, uncomment the following line:
@@ -87,7 +88,7 @@
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         // Mobile device style: fill the whole browser client area with the game canvas:
 
-        var meta = document.createElement('meta');
+var meta = document.createElement('meta');
         meta.name = 'viewport';
         meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
         document.getElementsByTagName('head')[0].appendChild(meta);
@@ -124,5 +125,11 @@
       };
       document.body.appendChild(script);
     </script>
+    
+    <script src="{{ url_for('static', filename='game/Build/Builds2.loader.js') }}"></script>
+<script src="{{ url_for('static', filename='game/Build/Builds2.framework.js') }}"></script>
+<script src="{{ url_for('static', filename='game/Build/Builds2.js') }}"></script>
+<script src="{{ url_for('static', filename='game/Build/Builds2.wasm') }}"></script>
+
   </body>
 </html>
