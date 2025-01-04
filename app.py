@@ -1,13 +1,10 @@
-from flask import Flask, render_template
+from flask import Flask, send_from_directory
 
-# تحديد التطبيق وإنشاءه مع تحديد مكان القوالب في المجلد الحالي (المجلد الذي يحتوي على app.py و index.html)
-app = Flask(__name__, template_folder='.')
+app = Flask(__name__, static_url_path='', static_folder='.')
 
 @app.route('/')
 def index():
-    # عرض ملف index.html الموجود في نفس المجلد
-    return render_template('index.html')
+    return app.send_static_file('index.html')
 
-if __name__ == '__main__':
-    # تشغيل الخادم
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run()
