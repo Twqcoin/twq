@@ -1,12 +1,13 @@
-import os
-from flask import Flask
+from flask import Flask, render_template
 
-app = Flask(__name__)
+# تحديد التطبيق وإنشاءه مع تحديد مكان القوالب في المجلد الحالي (المجلد الذي يحتوي على app.py و index.html)
+app = Flask(__name__, template_folder='.')
 
-@app.route("/")
-def home():
-    return "Hello, Heroku!"
+@app.route('/')
+def index():
+    # عرض ملف index.html الموجود في نفس المجلد
+    return render_template('index.html')
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # استخدم منفذ Heroku أو افتراضيًا 5000
-    app.run(host='0.0.0.0', port=port)
+if __name__ == '__main__':
+    # تشغيل الخادم
+    app.run(debug=True)
