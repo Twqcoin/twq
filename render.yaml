@@ -1,6 +1,0 @@
-services:
-  - type: background_worker
-    name: mining-worker
-    env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "python app.py"
