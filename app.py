@@ -22,4 +22,4 @@ def home():
 
 if __name__ == '__main__':
     run_background_task()  # بدء المهام في الخلفية
-    app.run(host='0.0.0.0', port=5000, debug=False)  # تشغيل التطبيق بدون debug
+    app.run(host='0.0.0.0', port=5000, debug=False)  # تم إغلاق القوس بشكل صحيح
