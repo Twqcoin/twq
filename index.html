@@ -4,8 +4,9 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | Twoo</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
+    <link rel="shortcut icon" href="{{ url_for('send_static', path='TemplateData/favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('send_static', path='TemplateData/style.css') }}">
+
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
@@ -49,18 +50,19 @@
         updateBannerVisibility();
       }
 
-      var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/Builds2.loader.js";
-      var config = {
-        dataUrl: buildUrl + "/Builds2.data",
-        frameworkUrl: buildUrl + "/Builds2.framework.js",
-        codeUrl: buildUrl + "/Builds2.wasm",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "DefaultCompany",
-        productName: "Twoo",
-        productVersion: "1.0",
-        showBanner: unityShowBanner,
-      };
+      var buildUrl = "{{ url_for('send_static', path='Build') }}";
+var loaderUrl = buildUrl + "/Builds2.loader.js";
+var config = {
+    dataUrl: buildUrl + "/Builds2.data",
+    frameworkUrl: buildUrl + "/Builds2.framework.js",
+    codeUrl: buildUrl + "/Builds2.wasm",
+    streamingAssetsUrl: "StreamingAssets",
+    companyName: "DefaultCompany",
+    productName: "Twoo",
+    productVersion: "1.0",
+    showBanner: unityShowBanner,
+};
+
 
       
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
