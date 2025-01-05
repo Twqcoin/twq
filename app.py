@@ -1,31 +1,58 @@
-from flask import Flask, render_template, request
-from celery import Celery
 import time
+import threading
+from flask import Flask, render_template
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
-# إعداد Celery
-app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
-app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
-celery.conf.update(app.config)
+# إعدادات قاعدة البيانات (SQLite في هذا المثال)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mining_state.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
-# وظيفة التعدين كمهمة Celery
-@celery.task
-def mining_task():
+# تعريف جدول حالة التعدين
+class MiningState(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    status = db.Column(db.String(100), nullable=False)
+
+# وظيفة المهام في الخلفية
+def background_task():
     while True:
-        # محاكاة عملية التعدين
-        print("Mining in progress...")
-        time.sleep(60)
+        with app.app_context():
+            try:
+                # تحديث حالة التعدين في قاعدة البيانات
+                state = MiningState.query.first()
+                if state:
+                    state.status = "Mining in progress"
+                else:
+                    state = MiningState(status="Mining in progress")
+                    db.session.add(state)
+                db.session.commit()
+                print("Running background task...")
+            except Exception as e:
+                print(f"Error: {e}")
+        time.sleep(60)  # يتكرر كل دقيقة
+
+# تشغيل المهام في الخلفية باستخدام threading
+def run_background_task():
+    thread = threading.Thread(target=background_task)
+    thread.daemon = True
+    thread.start()
 
 @app.route('/')
 def home():
-    return render_template('index.html')
-
-@app.route('/start-mining', methods=['POST'])
-def start_mining():
-    mining_task.delay()  # تشغيل المهمة في الخلفية
-    return "Mining started"
+    # عرض حالة التعدين من قاعدة البيانات
+    with app.app_context():
+        state = MiningState.query.first()
+        if state:
+            return render_template('index.html', status=state.status)
+        else:
+            return render_template('index.html', status="No mining task started yet.")
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # إنشاء قاعدة البيانات (إذا لم تكن موجودة)
+    with app.app_context():
+        db.create_all()
+    
+    run_background_task()  # بدء المهام في الخلفية
+    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
