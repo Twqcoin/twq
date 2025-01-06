@@ -79,8 +79,11 @@ def mining_status(player_id):
             logging.debug("No mining task started yet.")
             return jsonify({"status": "No mining task started", "elapsed_time": 0}), 200
 
-if __name__ == '__main__':
+@app.before_first_request
+def initialize():
     with app.app_context():
         db.create_all()  # إنشاء قاعدة البيانات إذا لم تكن موجودة
-    run_background_task()
-    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+
+if __name__ == '__main__':
+    run_background_task()  # تشغيل المهمة في الخلفية
+    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
