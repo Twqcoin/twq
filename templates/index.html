@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | Twoo</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='TemplateData/favicon.ico') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='TemplateData/favicon.ico') }}" type="image/x-icon">
     <link rel="stylesheet" href="{{ url_for('static', filename='TemplateData/style.css') }}">
   </head>
   <body>
@@ -95,11 +95,11 @@
             unityInstance.SetFullscreen(1);
           };
         }).catch((message) => {
-          alert(message);
+          unityShowBanner("Failed to load Unity: " + message, 'error');
         });
       };
       script.onerror = () => {
-        alert("Failed to load the Unity loader script.");
+        unityShowBanner("Failed to load the Unity loader script.", 'error');
       };
       document.body.appendChild(script);
 
@@ -112,7 +112,10 @@
           // تحديث الواجهة بناءً على حالة التعدين
           document.getElementById('mining-status').innerText = `Status: ${data.status}, Elapsed Time: ${data.elapsed_time.toFixed(2)} seconds`;
         })
-        .catch(error => console.log('Error fetching mining status:', error));
+        .catch(error => {
+          console.log('Error fetching mining status:', error);
+          document.getElementById('mining-status').innerText = 'Error fetching mining status.';
+        });
       }
     </script>
   </body>
