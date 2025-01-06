@@ -23,6 +23,13 @@
         <div id="unity-build-title">Twoo</div>
       </div>
     </div>
+
+    <!-- زر لتحديث حالة التعدين -->
+    <div id="mining-status-container">
+      <p>Mining Status: <span id="mining-status">Loading...</span></p>
+      <button onclick="checkMiningStatus('player123')">Check Mining Status</button>
+    </div>
+
     <script>
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
@@ -95,6 +102,18 @@
         alert("Failed to load the Unity loader script.");
       };
       document.body.appendChild(script);
+
+      // وظيفة استرجاع حالة التعدين باستخدام fetch
+      function checkMiningStatus(playerId) {
+        fetch(`/mining_status/${playerId}`)
+        .then(response => response.json())
+        .then(data => {
+          console.log('Mining Status:', data);
+          // تحديث الواجهة بناءً على حالة التعدين
+          document.getElementById('mining-status').innerText = `Status: ${data.status}, Elapsed Time: ${data.elapsed_time.toFixed(2)} seconds`;
+        })
+        .catch(error => console.log('Error fetching mining status:', error));
+      }
     </script>
   </body>
 </html>
