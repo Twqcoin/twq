@@ -1,63 +1,60 @@
-from flask import Flask, render_template, jsonify
+# app.py
+from flask import Flask, render_template, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-
-# إعدادات قاعدة البيانات
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mining_status.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# نموذج قاعدة البيانات لحفظ حالة التعدين
+# نموذج قاعدة البيانات لحالة التعدين
 class MiningStatus(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    player_id = db.Column(db.String(100), unique=True, nullable=False)
-    status = db.Column(db.String(100), nullable=False)
+    player_id = db.Column(db.String(50), unique=True, nullable=False)
+    status = db.Column(db.String(50), nullable=False)
     elapsed_time = db.Column(db.Float, nullable=False)
 
-    def __repr__(self):
-        return f"<MiningStatus {self.player_id}: {self.status}>"
-
-# إنشاء الجداول في قاعدة البيانات
-with app.app_context():
+# إنشاء الجداول
+@app.before_first_request
+def create_tables():
     db.create_all()
 
 @app.route('/')
-def home():
+def index():
     return render_template('index.html')
 
 @app.route('/mining_status/<player_id>', methods=['GET'])
-def mining_status_route(player_id):
-    # الحصول على حالة التعدين من قاعدة البيانات
-    mining_status = MiningStatus.query.filter_by(player_id=player_id).first()
-    
-    if mining_status:
-        return jsonify({
-            "status": mining_status.status,
-            "elapsed_time": mining_status.elapsed_time
-        })
+def get_mining_status(player_id):
+    player = MiningStatus.query.filter_by(player_id=player_id).first()
+    if player:
+        return jsonify({"status": player.status, "elapsed_time": player.elapsed_time})
     else:
-        return jsonify({"error": "Mining status not found"}), 404
+        return jsonify({"status": "Not started", "elapsed_time": 0.0})
 
 @app.route('/start_mining/<player_id>', methods=['POST'])
 def start_mining(player_id):
-    # بدء عملية التعدين (مثال بسيط)
-    new_status = MiningStatus(player_id=player_id, status="Mining in progress", elapsed_time=0.0)
-    db.session.add(new_status)
-    db.session.commit()
-    return jsonify({"message": "Mining started for player " + player_id})
-
-@app.route('/update_mining_status/<player_id>', methods=['POST'])
-def update_mining_status(player_id):
-    mining_status = MiningStatus.query.filter_by(player_id=player_id).first()
-    
-    if mining_status:
-        mining_status.status = "Mining completed"
-        mining_status.elapsed_time = 123.45  # يجب تحديث الوقت بناءً على المنطق الفعلي
-        db.session.commit()
-        return jsonify({"message": "Mining status updated"})
+    # بدء التعدين للاعب
+    player = MiningStatus.query.filter_by(player_id=player_id).first()
+    if player:
+        player.status = "Mining"
+        player.elapsed_time = 0.0
     else:
-        return jsonify({"error": "Mining status not found"}), 404
+        player = MiningStatus(player_id=player_id, status="Mining", elapsed_time=0.0)
+        db.session.add(player)
+
+    db.session.commit()
+    return jsonify({"status": "Mining started", "elapsed_time": player.elapsed_time})
+
+@app.route('/update_mining/<player_id>', methods=['POST'])
+def update_mining(player_id):
+    # تحديث الوقت المنقضي للتعدين
+    player = MiningStatus.query.filter_by(player_id=player_id).first()
+    if player:
+        player.elapsed_time += 0.1  # زيادة الوقت المنقضي
+        db.session.commit()
+        return jsonify({"status": player.status, "elapsed_time": player.elapsed_time})
+    else:
+        return jsonify({"status": "Not found", "elapsed_time": 0.0})
 
 if __name__ == '__main__':
     app.run(debug=True)
