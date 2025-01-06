@@ -14,10 +14,12 @@ class MiningStatus(db.Model):
     status = db.Column(db.String(50), nullable=False)
     elapsed_time = db.Column(db.Float, nullable=False)
 
-# إنشاء الجداول
-@app.before_first_request
+# إنشاء الجداول عند أول طلب
+@app.before_request
 def create_tables():
-    db.create_all()
+    # يتم التحقق إذا كانت الجداول موجودة، وإذا لم تكن سيتم إنشاؤها
+    with app.app_context():
+        db.create_all()
 
 @app.route('/')
 def index():
