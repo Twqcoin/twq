@@ -1,89 +1,48 @@
-import logging
-from flask import Flask, render_template, jsonify
-import time
-import threading
+from flask import Flask, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 
+# إنشاء تطبيق Flask
 app = Flask(__name__)
 
-# إعدادات قاعدة البيانات
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mining_state.db'
+# تكوين قاعدة البيانات (SQLite في هذه الحالة)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# إنشاء قاعدة البيانات
 db = SQLAlchemy(app)
 
-# إعدادات السجل
-logging.basicConfig(level=logging.DEBUG)
-
-# تعريف جدول حالة التعدين
-class MiningState(db.Model):
+# نموذج بيانات لتخزين المعلومات في قاعدة البيانات
+class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    status = db.Column(db.String(100), nullable=False)
-    start_time = db.Column(db.Float, nullable=False)
-    elapsed_time = db.Column(db.Float, nullable=True)  # إضافة العمود لاحتساب الوقت المستغرق
+    title = db.Column(db.String(100), nullable=False)
+    content = db.Column(db.Text, nullable=False)
 
-# وظيفة المهام في الخلفية
-def background_task():
-    while True:
-        with app.app_context():
-            try:
-                state = MiningState.query.first()
-                if state:
-                    elapsed_time = time.time() - state.start_time
-                    state.status = "Mining in progress"
-                    state.elapsed_time = elapsed_time  # تحديث الوقت المستغرق
-                    logging.debug(f"Mining in progress... Elapsed time: {elapsed_time:.2f} seconds")
-                else:
-                    state = MiningState(status="Mining in progress", start_time=time.time())
-                    db.session.add(state)
-                    logging.debug("New mining session started.")
-                db.session.commit()
-                logging.debug(f"Background task running... Status: {state.status}, Elapsed Time: {state.elapsed_time:.2f} seconds")
-            except Exception as e:
-                logging.error(f"Error: {e}")
-        time.sleep(60)
+    def __repr__(self):
+        return f"Post('{self.title}', '{self.content}')"
 
-# تشغيل المهام في الخلفية
-def run_background_task():
-    thread = threading.Thread(target=background_task)
-    thread.daemon = True
-    thread.start()
+# قبل كل طلب لتحديث أو إنشاء قاعدة البيانات إذا لم تكن موجودة
+@app.before_request
+def before_request():
+    db.create_all()
 
+# الصفحة الرئيسية التي تعرض جميع المنشورات
 @app.route('/')
 def home():
-    return render_template('index.html')
+    posts = Post.query.all()
+    return render_template('index.html', posts=posts)
 
-@app.route('/start_mining', methods=['POST'])
-def start_mining():
-    with app.app_context():
-        state = MiningState.query.first()
-        if state:
-            state.status = "Mining started"
-            state.start_time = time.time()
-            state.elapsed_time = 0  # إعادة تعيين الوقت المستغرق إلى صفر عند بدء التعدين
-        else:
-            state = MiningState(status="Mining started", start_time=time.time(), elapsed_time=0)
-            db.session.add(state)
+# صفحة لإضافة منشور جديد
+@app.route('/add', methods=['GET', 'POST'])
+def add_post():
+    if request.method == 'POST':
+        title = request.form['title']
+        content = request.form['content']
+        new_post = Post(title=title, content=content)
+        db.session.add(new_post)
         db.session.commit()
-        logging.info("Mining started!")
-    return jsonify({"status": "Mining started"}), 200
+        return redirect('/')
+    return render_template('add_post.html')
 
-@app.route('/mining_status/<player_id>', methods=['GET'])
-def mining_status(player_id):
-    with app.app_context():
-        state = MiningState.query.first()
-        if state:
-            elapsed_time = time.time() - state.start_time
-            logging.debug(f"Mining status fetched: {state.status}, Elapsed time: {elapsed_time:.2f} seconds")
-            return jsonify({"status": state.status, "elapsed_time": elapsed_time}), 200
-        else:
-            logging.debug("No mining task started yet.")
-            return jsonify({"status": "No mining task started", "elapsed_time": 0}), 200
-
-@app.before_first_request
-def initialize():
-    with app.app_context():
-        db.create_all()  # إنشاء قاعدة البيانات إذا لم تكن موجودة
-
+# تشغيل التطبيق
 if __name__ == '__main__':
-    run_background_task()  # تشغيل المهمة في الخلفية
-    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+    app.run(debug=True)
