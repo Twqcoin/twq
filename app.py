@@ -23,9 +23,9 @@ def background_task():
                 # تحديث حالة التعدين في قاعدة البيانات
                 state = MiningState.query.first()
                 if state:
-                    state.status = "Mining in progress"
+                    state.status = "Mining in progress"  # تحديث الحالة إلى التعدين مستمر
                 else:
-                    state = MiningState(status="Mining in progress")
+                    state = MiningState(status="Mining in progress")  # إضافة سجل جديد إذا لم يوجد
                     db.session.add(state)
                 db.session.commit()
                 print("Running background task...")
@@ -36,7 +36,7 @@ def background_task():
 # تشغيل المهام في الخلفية باستخدام threading
 def run_background_task():
     thread = threading.Thread(target=background_task)
-    thread.daemon = True
+    thread.daemon = True  # يجعل المهمة تعمل في الخلفية وتغلق تلقائيًا عند إغلاق التطبيق
     thread.start()
 
 @app.route('/')
