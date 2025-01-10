@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: web-service
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+
+  - type: worker
+    name: mining-worker
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python mining_script.py
