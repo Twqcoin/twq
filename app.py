@@ -1,6 +1,8 @@
 from flask import Flask, render_template, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mining_status.db'
@@ -16,10 +18,29 @@ class MiningStatus(db.Model):
     start_time = db.Column(db.DateTime, nullable=True)  # وقت بدء التعدين
 
 # إنشاء الجداول عند أول طلب
-@app.before_request
+@app.before_first_request
 def create_tables():
     with app.app_context():
         db.create_all()
+
+# وظيفة لتحديث حالة التعدين لجميع اللاعبين
+def update_all_mining_statuses():
+    players = MiningStatus.query.all()
+    for player in players:
+        if player.status == "Mining" and player.start_time:
+            now = datetime.now()
+            delta = (now - player.start_time).total_seconds() / 60.0  # الفرق بالدقائق
+            player.elapsed_time += delta
+            player.start_time = now  # إعادة تعيين وقت البدء
+    db.session.commit()
+
+# جدولة الوظيفة
+scheduler = BackgroundScheduler()
+scheduler.add_job(func=update_all_mining_statuses, trigger="interval", minutes=1)
+scheduler.start()
+
+# تأكد من إيقاف الجدول عند إيقاف التطبيق
+atexit.register(lambda: scheduler.shutdown())
 
 # صفحة البداية
 @app.route('/')
