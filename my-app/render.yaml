@@ -11,4 +11,4 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python mining_script.py
+    startCommand: celery -A app.celery worker --loglevel=info
