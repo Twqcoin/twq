@@ -76,7 +76,7 @@
         document.getElementsByTagName('head')[0].appendChild(meta);
         container.className = "unity-mobile";
         canvas.className = "unity-mobile";
-        unityShowBanner('WebGL builds are not supported on mobile devices.');
+        unityShowBanner('WebGL builds are not fully supported on mobile devices. For a better experience, please use a desktop browser.', 'warning');
       } else {
         canvas.style.width = "1080px";
         canvas.style.height = "1920px";
@@ -104,17 +104,22 @@
       document.body.appendChild(script);
 
       // وظيفة استرجاع حالة التعدين باستخدام fetch
+      let isFetching = false;
       function checkMiningStatus(playerId) {
+        if (isFetching) return; // تجنب الطلبات المتكررة
+        isFetching = true;
+        
         fetch(`/mining_status/${playerId}`)
         .then(response => response.json())
         .then(data => {
+          isFetching = false;
           console.log('Mining Status:', data);
-          // تحديث الواجهة بناءً على حالة التعدين
-          document.getElementById('mining-status').innerText = `Status: ${data.status}, Elapsed Time: ${data.elapsed_time.toFixed(2)} seconds`;
+          document.getElementById('mining-status').innerText = `Status: ${data.status}, Elapsed Time: ${data.elapsed_time.toFixed(2)} minutes`;
         })
         .catch(error => {
+          isFetching = false;
           console.log('Error fetching mining status:', error);
-          document.getElementById('mining-status').innerText = 'Error fetching mining status.';
+          document.getElementById('mining-status').innerText = 'Error fetching mining status. Please try again later.';
         });
       }
     </script>
