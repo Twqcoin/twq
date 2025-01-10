@@ -3,5 +3,13 @@ services:
     name: web-service
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt  # استخدام pip لتثبيت الحزم
+    buildCommand: pip install -r requirements.txt  # تأكد أن pip يستخدم
     startCommand: python app.py
+
+  - type: worker
+    name: mining-worker
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt  # تأكد أن pip يستخدم
+    startCommand: python mining_script.py
+
