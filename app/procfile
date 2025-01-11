@@ -1,2 +1,2 @@
 web: python app.py
-worker: python mining_script.py
+worker: celery -A celery_worker.celery worker --loglevel=info
