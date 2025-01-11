@@ -1,12 +1,18 @@
-from flask import Flask, jsonify
-from celery_worker import long_running_task  # استيراد المهمة
+from flask import Flask, render_template
+from celery import Celery
 
 app = Flask(__name__)
 
-@app.route('/start_task', methods=['GET'])
-def start_task():
-    task = long_running_task.apply_async()  # إرسال المهمة إلى Celery worker
-    return jsonify({"status": "Task started", "task_id": task.id})
+# إعدادات Celery
+app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'  # إذا كنت تستخدم Redis محليًا أو عنوان Redis خارجي
+app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'  # نفس الشيء
 
-if __name__ == "__main__":
+# استيراد ملف celery_worker
+from celery_worker import celery
+
+@app.route('/')
+def home():
+    return render_template('index.html')  # إرجاع صفحة HTML
+
+if __name__ == '__main__':
     app.run(debug=True)
