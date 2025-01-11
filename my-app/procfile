@@ -1,1 +1,1 @@
-web: cd my-app && python app.py
+web: cd my-app && gunicorn app:app
