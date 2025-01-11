@@ -1,0 +1,2 @@
+web: python app.py
+worker: python mining_script.py
