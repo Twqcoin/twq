@@ -1,14 +1,14 @@
 from flask import Flask, render_template
-from celery import Celery
+from celery_worker import make_celery  # استيراد make_celery بدلاً من celery مباشرة
 
 app = Flask(__name__)
 
 # إعدادات Celery
-app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'  # إذا كنت تستخدم Redis محليًا أو عنوان Redis خارجي
-app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'  # نفس الشيء
+app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'  # أو عنوان Redis الخاص بك
+app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
 
-# استيراد ملف celery_worker
-from celery_worker import celery
+# تهيئة Celery مع Flask بعد تهيئة التطبيق
+celery = make_celery(app)
 
 @app.route('/')
 def home():
