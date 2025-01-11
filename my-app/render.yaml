@@ -1,14 +1,9 @@
 services:
   - type: web
-    name: web-service
+    name: my-mining-app
     env: python
-    plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: python app.py
-
-  - type: worker
-    name: mining-worker
-    env: python
-    plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: celery -A app.celery worker --loglevel=info
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python app.py"
+    envVars:
+      - key: REDIS_URL
+        value: "redis://<your-redis-url>"
