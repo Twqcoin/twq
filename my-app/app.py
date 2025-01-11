@@ -5,8 +5,9 @@ import os
 
 app = Flask(__name__)
 
-# إعدادات Celery مع Redis كـ broker (تأكد من استخدام URL الخاص بـ Redis)
-app.config['CELERY_BROKER_URL'] = os.getenv('REDIS_URL', 'redis://localhost:6379/0')  # يمكنك استبدالها بـ URL الخاص بـ Redis Cloud
+# إعدادات Celery مع Redis كـ broker
+app.config['CELERY_BROKER_URL'] = os.getenv('REDIS_URL', 'redis://localhost:6379/0')  # جلب Redis URL من البيئة
+app.config['CELERY_RESULT_BACKEND'] = os.getenv('REDIS_URL', 'redis://localhost:6379/0')  # استخدام Redis أيضًا كـ backend
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
 celery.conf.update(app.config)
 
@@ -27,12 +28,8 @@ def start_mining_task(user_id):
 @app.route('/start_mining', methods=['POST'])
 def start_mining():
     user_id = request.json.get('user_id')
-    if not user_id:
-        return jsonify({"error": "User ID is required"}), 400
-    
     # إرسال المهمة إلى worker في الخلفية
     task = start_mining_task.apply_async(args=[user_id])
-    
     return jsonify({"status": "Mining started", "task_id": task.id})
 
 @app.route('/mining_status/<user_id>', methods=['GET'])
@@ -42,4 +39,4 @@ def mining_status_route(user_id):
     return jsonify(status)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=5000)
