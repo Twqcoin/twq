@@ -2,11 +2,19 @@ from flask import Flask, render_template, jsonify
 import psycopg2
 import os
 from dotenv import load_dotenv
+from celery import Celery
 
 # تحميل المتغيرات من ملف .env
 load_dotenv()
 
 app = Flask(__name__)
+
+# إعدادات Celery
+app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')  # يجب تحديث الرابط حسب بيئتك
+app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+
+# تهيئة Celery
+celery = make_celery(app)
 
 # إعداد الاتصال بقاعدة البيانات
 connection = psycopg2.connect(
