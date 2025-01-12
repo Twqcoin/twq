@@ -9,6 +9,11 @@ def index():
     data_param = request.args.get('data')
     if data_param:
         try:
+            # تعديل البيانات بإضافة حشو إذا لزم الأمر
+            missing_padding = len(data_param) % 4
+            if missing_padding:
+                data_param += '=' * (4 - missing_padding)
+
             # فك تشفير البيانات باستخدام Base64
             decoded_data = base64.urlsafe_b64decode(data_param).decode('utf-8')
             # تحميل البيانات إلى JSON
