@@ -15,10 +15,16 @@ def index():
                 data_param += '=' * (4 - missing_padding)
 
             # فك تشفير البيانات باستخدام Base64
-            decoded_data = base64.urlsafe_b64decode(data_param).decode('utf-8')
+            decoded_data = base64.urlsafe_b64decode(data_param)
+            
+            # محاولة فك التشفير باستخدام UTF-8، وإذا فشلت يتم استخدام Latin-1
+            try:
+                decoded_str = decoded_data.decode('utf-8')
+            except UnicodeDecodeError:
+                decoded_str = decoded_data.decode('latin-1')
+            
             # تحميل البيانات إلى JSON
-            player_data = json.loads(decoded_data)
-            # الحصول على اسم اللاعب وصورته
+            player_data = json.loads(decoded_str)
             player_name = player_data.get('name', 'Unknown Player')
             player_image = player_data.get('profile_pic', '')
 
