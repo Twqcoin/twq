@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, g
 import psycopg2
 import os
 from dotenv import load_dotenv
@@ -10,8 +10,8 @@ load_dotenv()
 app = Flask(__name__)
 
 # Celery configuration
-app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')  # You can change this to RabbitMQ or another broker
+app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND', 'postgresql+psycopg2://your_user:your_password@localhost/your_dbname')
 
 # Initialize Celery
 celery = make_celery(app)
