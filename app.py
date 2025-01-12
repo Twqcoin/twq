@@ -17,6 +17,10 @@ def index():
             # فك تشفير البيانات باستخدام Base64
             decoded_data = base64.urlsafe_b64decode(data_param)
             
+            # التحقق من أن البيانات ليست فارغة
+            if not decoded_data:
+                raise ValueError("Decoded data is empty")
+
             # محاولة فك التشفير باستخدام UTF-8، وإذا فشلت يتم استخدام Latin-1
             try:
                 decoded_str = decoded_data.decode('utf-8')
