@@ -2,23 +2,21 @@ from flask import Flask, render_template, jsonify, g
 import psycopg2
 import os
 from dotenv import load_dotenv
-from celery_worker import make_celery  # Ensure make_celery is imported from celery_worker
-import redis  # Importing redis
+from celery import Celery  # Import Celery directly
+import psycopg2
 
 # Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
 
-# Celery configuration
-app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')  # Using Redis as the broker
-app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')  # Store result in Redis
+# Celery configuration to use PostgreSQL
+app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL', 'postgresql://your_user:your_password@localhost/your_db')  # Using PostgreSQL as broker
+app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND', 'postgresql://your_user:your_password@localhost/your_db')  # Store result in PostgreSQL
 
 # Initialize Celery
-celery = make_celery(app)
-
-# Redis connection setup
-r = redis.Redis(host='localhost', port=6379, db=0)
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
 
 # Database connection setup
 def get_db_connection():
