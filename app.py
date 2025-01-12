@@ -2,21 +2,25 @@ from flask import Flask, render_template, jsonify, g
 import psycopg2
 import os
 from dotenv import load_dotenv
-from celery_worker import make_celery  # تأكد من استيراد make_celery من celery_worker
+from celery_worker import make_celery  # Ensure make_celery is imported from celery_worker
+import redis  # Importing redis
 
-# تحميل متغيرات البيئة من ملف .env
+# Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
 
-# تكوين Celery
-app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')  # يمكنك تغيير هذا إلى RabbitMQ أو أي وسيط آخر
-app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND', 'postgresql+psycopg2://your_user:your_password@localhost/your_dbname')
+# Celery configuration
+app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')  # Using Redis as the broker
+app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')  # Store result in Redis
 
-# تهيئة Celery
+# Initialize Celery
 celery = make_celery(app)
 
-# إعداد الاتصال بقاعدة البيانات
+# Redis connection setup
+r = redis.Redis(host='localhost', port=6379, db=0)
+
+# Database connection setup
 def get_db_connection():
     try:
         connection = psycopg2.connect(
@@ -30,7 +34,7 @@ def get_db_connection():
         print(f"Error connecting to database: {e}")
         return None
 
-# مسار لعرض اللاعبين
+# Route to display players
 @app.route("/players", methods=["GET"])
 def get_players():
     connection = get_db_connection()
@@ -49,12 +53,12 @@ def get_players():
         cursor.close()
         connection.close()
 
-# مسار الصفحة الرئيسية
+# Index page route
 @app.route("/")
 def index():
     return render_template("index.html")
 
-# إغلاق الاتصال بقاعدة البيانات عندما ينتهي سياق التطبيق
+# Close the database connection when the app context ends
 @app.teardown_appcontext
 def close_connection(exception):
     connection = getattr(g, 'db', None)
