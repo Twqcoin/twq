@@ -17,23 +17,37 @@ app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND', 'redis:
 celery = make_celery(app)
 
 # Database connection setup
-connection = psycopg2.connect(
-    host=os.getenv("DB_HOST", "localhost"),
-    database=os.getenv("DB_NAME", "game_db"),
-    user=os.getenv("DB_USER", "your_user"),
-    password=os.getenv("DB_PASSWORD", "your_password")
-)
-
-# Create a cursor object to interact with the database
-cursor = connection.cursor()
+def get_db_connection():
+    try:
+        connection = psycopg2.connect(
+            host=os.getenv("DB_HOST", "localhost"),
+            database=os.getenv("DB_NAME", "game_db"),
+            user=os.getenv("DB_USER", "your_user"),
+            password=os.getenv("DB_PASSWORD", "your_password")
+        )
+        return connection
+    except Exception as e:
+        print(f"Error connecting to database: {e}")
+        return None
 
 # Route to display players
 @app.route("/players", methods=["GET"])
 def get_players():
-    cursor.execute("SELECT * FROM players;")
-    players = cursor.fetchall()
-    players_list = [{"id": player[0], "name": player[1]} for player in players]
-    return jsonify(players_list)
+    connection = get_db_connection()
+    if connection is None:
+        return jsonify({"error": "Unable to connect to database"}), 500
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM players;")
+        players = cursor.fetchall()
+        players_list = [{"id": player[0], "name": player[1]} for player in players]
+        return jsonify(players_list)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
 
 # Index page route
 @app.route("/")
@@ -43,8 +57,9 @@ def index():
 # Close the database connection when the app context ends
 @app.teardown_appcontext
 def close_connection(exception):
-    cursor.close()
-    connection.close()
+    connection = getattr(g, 'db', None)
+    if connection is not None:
+        connection.close()
 
 if __name__ == "__main__":
     app.run(debug=True)
