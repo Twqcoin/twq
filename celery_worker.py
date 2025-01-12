@@ -1,14 +1,11 @@
 from celery import Celery
 
-# تأجيل استيراد Flask بعد تهيئة التطبيق
 def make_celery(app):
+    # إعداد Celery مع Flask
     celery = Celery(
         app.import_name,
         backend=app.config['CELERY_RESULT_BACKEND'],
         broker=app.config['CELERY_BROKER_URL']
     )
-    celery.conf.update(app.config)
+    celery.conf.update(app.config)  # تطبيق إعدادات Flask على Celery
     return celery
-
-# لا نقوم بإنشاء celery هنا
-# سيتم إنشاؤه بعد تهيئة التطبيق
