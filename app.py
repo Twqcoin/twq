@@ -2,7 +2,7 @@ from flask import Flask, render_template, jsonify
 import psycopg2
 import os
 from dotenv import load_dotenv
-from celery_config import make_celery  # تأكد من استيراد make_celery بشكل صحيح
+from celery_worker import make_celery  # التأكد من استيراد make_celery بشكل صحيح
 
 # تحميل المتغيرات من ملف .env
 load_dotenv()
@@ -43,8 +43,10 @@ def index():
 # إغلاق الاتصال عند الخروج
 @app.teardown_appcontext
 def close_connection(exception):
-    cursor.close()
-    connection.close()
+    if cursor:
+        cursor.close()
+    if connection:
+        connection.close()
 
 if __name__ == "__main__":
     app.run(debug=True)
