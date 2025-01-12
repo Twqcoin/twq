@@ -24,16 +24,16 @@
       </div>
     </div>
 
+    <!-- عرض معلومات اللاعب -->
+    <div id="player-info">
+      <img id="player-profile-pic" src="" alt="Player Profile Picture" />
+      <h2 id="player-name">Player Name</h2>
+    </div>
+
     <!-- زر لتحديث حالة التعدين -->
     <div id="mining-status-container">
       <p>Mining Status: <span id="mining-status">Loading...</span></p>
       <button onclick="checkMiningStatus('player123')">Check Mining Status</button>
-    </div>
-
-    <!-- قسم لإظهار اسم اللاعب وصورته -->
-    <div id="player-info">
-      <img id="player-image" src="" alt="Player Image" width="100" height="100"/>
-      <p id="player-name">Player Name</p>
     </div>
 
     <script>
@@ -109,26 +109,22 @@
       };
       document.body.appendChild(script);
 
-      // وظيفة استرجاع حالة التعدين وبيانات اللاعب باستخدام fetch
+      // وظيفة استرجاع حالة التعدين باستخدام fetch
       function checkMiningStatus(playerId) {
         fetch(`/mining_status/${playerId}`)
-          .then(response => response.json())
-          .then(data => {
-            console.log('Mining Status:', data);
-            // تحديث الواجهة بناءً على حالة التعدين
-            document.getElementById('mining-status').innerText = `Status: ${data.status}, Elapsed Time: ${data.elapsed_time.toFixed(2)} seconds`;
-
-            // تحديث بيانات اللاعب (الاسم والصورة)
-            document.getElementById('player-name').innerText = data.player_name || 'Unknown Player';  // التحقق من وجود الاسم
-            let playerImage = document.getElementById('player-image');
-            playerImage.src = data.player_image || '/path/to/default-image.png';  // التحقق من وجود رابط الصورة
-            playerImage.onerror = function() {
-              this.src = '/path/to/default-image.png'; // صورة بديلة عند حدوث خطأ
-            };
-          })
-          .catch(error => {
-            console.error('Error fetching mining status:', error);
-          });
+        .then(response => response.json())
+        .then(data => {
+          console.log('Mining Status:', data);
+          // تحديث الواجهة بناءً على حالة التعدين
+          document.getElementById('mining-status').innerText = `Status: ${data.status}, Elapsed Time: ${data.elapsed_time.toFixed(2)} seconds`;
+          
+          // تحديث اسم اللاعب وصورته
+          if (data.player_name && data.player_profile_pic) {
+            document.getElementById('player-name').innerText = data.player_name;
+            document.getElementById('player-profile-pic').src = data.player_profile_pic;
+          }
+        })
+        .catch(error => console.log('Error fetching mining status:', error));
       }
     </script>
   </body>
