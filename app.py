@@ -26,7 +26,7 @@ def index():
             return render_template('index.html', player_name=player_name, player_image=player_image)
         except (ValueError, json.JSONDecodeError, base64.binascii.Error) as e:
             print(f"Error decoding data: {e}")
-            return "Error processing player data", 400
+            return f"Error processing player data: {e}", 400
     else:
         return "No player data provided", 400
 
