@@ -119,10 +119,16 @@
             document.getElementById('mining-status').innerText = `Status: ${data.status}, Elapsed Time: ${data.elapsed_time.toFixed(2)} seconds`;
 
             // تحديث بيانات اللاعب (الاسم والصورة)
-            document.getElementById('player-name').innerText = data.player_name;  // فرضًا أن الاسم موجود في البيانات
-            document.getElementById('player-image').src = data.player_image;      // فرضًا أن رابط الصورة موجود في البيانات
+            document.getElementById('player-name').innerText = data.player_name || 'Unknown Player';  // التحقق من وجود الاسم
+            let playerImage = document.getElementById('player-image');
+            playerImage.src = data.player_image || '/path/to/default-image.png';  // التحقق من وجود رابط الصورة
+            playerImage.onerror = function() {
+              this.src = '/path/to/default-image.png'; // صورة بديلة عند حدوث خطأ
+            };
           })
-          .catch(error => console.log('Error fetching mining status:', error));
+          .catch(error => {
+            console.error('Error fetching mining status:', error);
+          });
       }
     </script>
   </body>
