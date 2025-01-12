@@ -2,21 +2,21 @@ from flask import Flask, render_template, jsonify
 import psycopg2
 import os
 from dotenv import load_dotenv
-from celery_worker import make_celery  # تأكد من استيراد make_celery من celery_worker
+from celery_worker import make_celery  # Ensure make_celery is imported from celery_worker
 
-# تحميل المتغيرات من ملف .env
+# Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
 
-# إعدادات Celery
+# Celery configuration
 app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
 app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 
-# تهيئة Celery
+# Initialize Celery
 celery = make_celery(app)
 
-# إعداد الاتصال بقاعدة البيانات
+# Database connection setup
 connection = psycopg2.connect(
     host=os.getenv("DB_HOST", "localhost"),
     database=os.getenv("DB_NAME", "game_db"),
@@ -24,10 +24,10 @@ connection = psycopg2.connect(
     password=os.getenv("DB_PASSWORD", "your_password")
 )
 
-# إنشاء كائن Cursor للتفاعل مع قاعدة البيانات
+# Create a cursor object to interact with the database
 cursor = connection.cursor()
 
-# دالة لعرض اللاعبين
+# Route to display players
 @app.route("/players", methods=["GET"])
 def get_players():
     cursor.execute("SELECT * FROM players;")
@@ -35,12 +35,12 @@ def get_players():
     players_list = [{"id": player[0], "name": player[1]} for player in players]
     return jsonify(players_list)
 
-# صفحة الـ index لعرض اللاعبين
+# Index page route
 @app.route("/")
 def index():
     return render_template("index.html")
 
-# إغلاق الاتصال عند الخروج
+# Close the database connection when the app context ends
 @app.teardown_appcontext
 def close_connection(exception):
     cursor.close()
