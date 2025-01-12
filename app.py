@@ -1,21 +1,29 @@
-from flask import request, jsonify
+from flask import Flask, request, jsonify, render_template
 import json
 import base64
+
+app = Flask(__name__)
 
 @app.route('/')
 def index():
     data_param = request.args.get('data')
     if data_param:
         try:
-            decoded_data = base64.urlsafe_b64decode(data_param)
+            # فك تشفير البيانات باستخدام Base64
+            decoded_data = base64.urlsafe_b64decode(data_param).decode('utf-8')
+            # تحميل البيانات إلى JSON
             player_data = json.loads(decoded_data)
+            # الحصول على اسم اللاعب وصورته
             player_name = player_data.get('name', 'Unknown Player')
             player_image = player_data.get('profile_pic', '')
 
-            # هنا يمكن تمرير البيانات إلى الواجهة لعرضها
+            # تمرير البيانات إلى القالب لعرضها
             return render_template('index.html', player_name=player_name, player_image=player_image)
-        except Exception as e:
+        except (ValueError, json.JSONDecodeError, base64.binascii.Error) as e:
             print(f"Error decoding data: {e}")
             return "Error processing player data", 400
     else:
         return "No player data provided", 400
+
+if __name__ == '__main__':
+    app.run(debug=True)
