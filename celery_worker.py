@@ -1,8 +1,6 @@
 from celery import Celery
-import os
 
 def make_celery(app):
-    # إنشاء كائن Celery مع إعدادات التطبيق
     celery = Celery(
         app.import_name,
         backend=app.config['CELERY_RESULT_BACKEND'],
