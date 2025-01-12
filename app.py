@@ -1,14 +1,19 @@
 from flask import Flask, render_template, jsonify
 import psycopg2
+import os
+from dotenv import load_dotenv
+
+# تحميل المتغيرات من ملف .env
+load_dotenv()
 
 app = Flask(__name__)
 
 # إعداد الاتصال بقاعدة البيانات
 connection = psycopg2.connect(
-    host="your_host",
-    database="game_db",  # اسم قاعدة البيانات التي تم إنشاؤها
-    user="your_user",  # اسم المستخدم
-    password="your_password"  # كلمة المرور
+    host=os.getenv("DB_HOST", "localhost"),  # استخدم متغير البيئة أو localhost إذا كنت تعمل محليًا
+    database=os.getenv("DB_NAME", "game_db"),  # اسم قاعدة البيانات
+    user=os.getenv("DB_USER", "your_user"),  # اسم المستخدم
+    password=os.getenv("DB_PASSWORD", "your_password")  # كلمة المرور
 )
 
 # إنشاء كائن Cursor للتفاعل مع قاعدة البيانات
