@@ -27,6 +27,9 @@ def index():
             except UnicodeDecodeError:
                 decoded_str = decoded_data.decode('latin-1')
 
+            # طباعة البيانات المفكوكة لفحصها
+            print("Decoded string:", decoded_str)
+
             # محاولة تحميل البيانات إلى JSON
             try:
                 player_data = json.loads(decoded_str)
