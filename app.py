@@ -47,6 +47,7 @@ def get_players():
 # Index page route
 @app.route("/")
 def index():
+    # Use the correct path for the static files (Unity WebGL)
     return render_template("index.html")
 
 # Close the database connection when the app context ends
