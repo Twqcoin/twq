@@ -41,12 +41,11 @@
         if (userData) {
             try {
                 // فك تشفير البيانات
-                const decodedData = JSON.parse(decodeURIComponent(userData));
-
-                // طباعة البيانات في الكونسول للتحقق
-                console.log("Decoded Data:", decodedData);  // طباعة البيانات الكاملة
-                console.log("User Name:", decodedData.name);  // طباعة اسم المستخدم
-                console.log("Profile Picture URL:", decodedData.profile_pic);  // طباعة رابط الصورة
+               const urlParams = new URLSearchParams(window.location.search);
+                 const userData = urlParams.get('data');
+                 console.log("URL Parameters:", window.location.search);  // طباعة المعلمات في الرابط
+                 console.log("Decoded Data:", userData);  // طباعة المعلمة "data"
+ 
 
                 // عرض البيانات داخل الصفحة
                 document.getElementById("user-name").textContent = decodedData.name || "اسم غير متوفر";
