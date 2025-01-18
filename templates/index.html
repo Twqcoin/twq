@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="TemplateData/style.css">
     
     <!-- Content Security Policy -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://your_domain.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
 </head>
 <body>
     <div id="unity-container" class="unity-desktop">
@@ -52,7 +52,7 @@
             updateBannerVisibility();
         }
 
-        var buildUrl = "Build";
+        var buildUrl = "/static/Build";  // تأكد من أن هذا هو المسار الصحيح داخل مجلد static
         var loaderUrl = buildUrl + "/Builds2.loader.js";
         var config = {
             dataUrl: buildUrl + "/Builds2.data",
