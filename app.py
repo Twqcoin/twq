@@ -2,8 +2,8 @@ from flask import Flask, render_template, jsonify, g
 import psycopg2
 import os
 from dotenv import load_dotenv
-from celery import Celery  # Import Celery directly
-import redis
+from celery import Celery
+import requests
 
 # Load environment variables from .env file
 load_dotenv()
@@ -29,6 +29,23 @@ def get_db_connection():
         )
     return g.db
 
+# Function to send player info to Telegram
+def send_message_to_telegram(chat_id, player_name, player_image_url):
+    token = os.getenv("TELEGRAM_BOT_TOKEN")  # تأكد من أن هذا هو التوكن الصحيح للبوت
+    url = f"https://api.telegram.org/bot{token}/sendPhoto"
+    message = f"Player Name: {player_name}"
+
+    payload = {
+        "chat_id": chat_id,
+        "caption": message,
+        "photo": player_image_url  # تأكد من إضافة الرابط الصحيح للصورة
+    }
+
+    response = requests.post(url, data=payload)
+    if response.status_code != 200:
+        print(f"Error sending message: {response.text}")
+    return response
+
 # Route to display players
 @app.route("/players", methods=["GET"])
 def get_players():
@@ -37,8 +54,27 @@ def get_players():
         cursor = connection.cursor()
         cursor.execute("SELECT * FROM players;")
         players = cursor.fetchall()
-        players_list = [{"id": player[0], "name": player[1]} for player in players]
+        players_list = [{"id": player[0], "name": player[1], "image_url": player[2]} for player in players]
         return jsonify(players_list)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+
+# Route to send player data to Telegram (use this for testing)
+@app.route("/send_player_info/<int:player_id>/<chat_id>", methods=["GET"])
+def send_player_info(player_id, chat_id):
+    connection = get_db_connection()
+    try:
+        cursor = connection.cursor()
+        cursor.execute("SELECT name, image_url FROM players WHERE id = %s;", (player_id,))
+        player = cursor.fetchone()
+        if player:
+            player_name, player_image_url = player
+            send_message_to_telegram(chat_id, player_name, player_image_url)
+            return jsonify({"message": f"Player {player_name} info sent to Telegram."}), 200
+        else:
+            return jsonify({"error": "Player not found."}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
