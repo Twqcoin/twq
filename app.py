@@ -22,23 +22,23 @@ celery.conf.update(app.config)
 def get_db_connection():
     if 'db' not in g:
         g.db = psycopg2.connect(
-            host=os.getenv("DB_HOST", "localhost"),
-            database=os.getenv("DB_NAME", "game_db"),
-            user=os.getenv("DB_USER", "your_user"),
-            password=os.getenv("DB_PASSWORD", "your_password")
+            host=os.getenv("DB_HOST"),  # Use the host provided by Render
+            database=os.getenv("DB_NAME"),  # Your database name
+            user=os.getenv("DB_USER"),  # Your database username
+            password=os.getenv("DB_PASSWORD")  # Your database password
         )
     return g.db
 
 # Function to send player info to Telegram
 def send_message_to_telegram(chat_id, player_name, player_image_url):
-    token = os.getenv("TELEGRAM_BOT_TOKEN")  # تأكد من أن هذا هو التوكن الصحيح للبوت
+    token = os.getenv("TELEGRAM_BOT_TOKEN")  # Ensure this is the correct bot token
     url = f"https://api.telegram.org/bot{token}/sendPhoto"
     message = f"Player Name: {player_name}"
 
     payload = {
         "chat_id": chat_id,
         "caption": message,
-        "photo": player_image_url  # تأكد من إضافة الرابط الصحيح للصورة
+        "photo": player_image_url  # Ensure this is the correct image URL
     }
 
     response = requests.post(url, data=payload)
@@ -94,4 +94,4 @@ def close_connection(exception):
         connection.close()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
