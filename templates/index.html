@@ -87,11 +87,15 @@
 
       // Start the mining process
       function startMining() {
+        console.log("Mining started..."); // عرض رسالة في الكونسول عند بدء التعدين
+
         miningWorker = new Worker('{{ url_for('static', filename='worker.js') }}'); // تعديل المسار هنا
         miningWorker.onmessage = function(event) {
           if (event.data === 'MiningComplete') {
+            console.log("Mining completed!"); // عرض رسالة عند اكتمال التعدين
             unityInstance.SendMessage('GameController', 'OnMiningComplete');
           } else {
+            console.log("Mining progress:", event.data); // عرض التقدم في الكونسول
             unityInstance.SendMessage('GameController', 'OnMiningProgressUpdated', event.data);
           }
         };
