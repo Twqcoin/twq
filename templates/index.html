@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | Twoo</title>
+    <!-- تعديل المسارات هنا لتصبح ديناميكية باستخدام url_for -->
     <link rel="shortcut icon" href="{{ url_for('static', filename='TemplateData/favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='TemplateData/style.css') }}">
   </head>
@@ -23,36 +24,7 @@
         <div id="unity-build-title">Twoo</div>
       </div>
     </div>
-    
     <script>
-      // إنشاء WebSocket
-      var socket = new WebSocket('ws://example.com/socket');  // تغيير URL إلى URL خادم WebSocket الخاص بك
-
-      // التحقق من فتح الاتصال
-      socket.onopen = function() {
-          console.log("WebSocket connection established.");
-      };
-
-      // التحقق من استقبال الرسائل
-      socket.onmessage = function(event) {
-          console.log("Received message: ", event.data);
-      };
-
-      // التحقق من وجود أخطاء في الاتصال
-      socket.onerror = function(error) {
-          console.log("WebSocket error:", error);
-      };
-
-      // التحقق من غلق الاتصال
-      socket.onclose = function() {
-          console.log("WebSocket connection closed.");
-      };
-
-      // إرسال رسالة عبر WebSocket بعد الاتصال
-      socket.onopen = function() {
-          socket.send('Hello, Server!');
-      };
-
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
       var loadingBar = document.querySelector("#unity-loading-bar");
@@ -78,6 +50,7 @@
         updateBannerVisibility();
       }
 
+      // تعديل المسار هنا باستخدام url_for
       var buildUrl = "{{ url_for('static', filename='Build') }}";
       var loaderUrl = buildUrl + "/Builds2.loader.js";
       var config = {
@@ -105,6 +78,57 @@
       }
 
       loadingBar.style.display = "block";
+
+      // Web Worker code for mining
+      var miningWorker;
+      if (localStorage.getItem('isMining') === 'true') {
+        startMining();
+      }
+
+      // Start the mining process
+      function startMining() {
+        miningWorker = new Worker('{{ url_for('static', filename='worker.js') }}'); // تعديل المسار هنا
+        miningWorker.onmessage = function(event) {
+          console.log("Received message from worker:", event.data);  // عرض البيانات في الكونسول
+          if (event.data === 'MiningComplete') {
+            unityInstance.SendMessage('GameController', 'OnMiningComplete');
+          } else {
+            unityInstance.SendMessage('GameController', 'OnMiningProgressUpdated', event.data);
+          }
+        };
+        miningWorker.onerror = function(error) {
+          console.error("Error in worker:", error.message);
+        };
+        miningWorker.postMessage('startMining');
+        localStorage.setItem('isMining', 'true');
+      }
+
+      // WebSocket connection (تأكد من استخدام wss:// بدلاً من ws://)
+      var socket = new WebSocket('wss://example.com/socket');
+
+      socket.onopen = function() {
+        console.log("WebSocket connection established.");
+        socket.send('Hello, Server!');
+      };
+
+      socket.onmessage = function(event) {
+        console.log("Received message from server:", event.data);
+      };
+
+      socket.onerror = function(error) {
+        console.log("WebSocket error:", error);
+      };
+
+      socket.onclose = function() {
+        console.log("WebSocket connection closed.");
+      };
+
+      window.onbeforeunload = function() {
+        localStorage.setItem('isMining', 'false');
+        if (miningWorker) {
+          miningWorker.terminate();
+        }
+      };
 
       var script = document.createElement("script");
       script.src = loaderUrl;
