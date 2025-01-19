@@ -87,9 +87,9 @@
 
       // Start the mining process
       function startMining() {
-        miningWorker = new Worker('{{ url_for('static', filename='worker.js') }}'); // تعديل المسار هنا
+        miningWorker = new Worker('{{ url_for('static', filename='worker.js') }}'); // تأكد من المسار الصحيح للـ worker.js
         miningWorker.onmessage = function(event) {
-          console.log("Received message from worker:", event.data);  // عرض البيانات في الكونسول
+          console.log("Received message from worker:", event.data);
           if (event.data === 'MiningComplete') {
             unityInstance.SendMessage('GameController', 'OnMiningComplete');
           } else {
@@ -103,27 +103,7 @@
         localStorage.setItem('isMining', 'true');
       }
 
-      // WebSocket connection (تأكد من استخدام wss:// بدلاً من ws://)
-      var socket = new WebSocket('wss://twq.onrender.com/socket');
-
-
-      socket.onopen = function() {
-        console.log("WebSocket connection established.");
-        socket.send('Hello, Server!');
-      };
-
-      socket.onmessage = function(event) {
-        console.log("Received message from server:", event.data);
-      };
-
-      socket.onerror = function(error) {
-        console.log("WebSocket error:", error);
-      };
-
-      socket.onclose = function() {
-        console.log("WebSocket connection closed.");
-      };
-
+      // Stop mining when the player exits or reloads the page
       window.onbeforeunload = function() {
         localStorage.setItem('isMining', 'false');
         if (miningWorker) {
