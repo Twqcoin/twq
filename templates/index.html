@@ -4,12 +4,13 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | Twoo</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
+    <!-- تعديل المسارات هنا لتصبح ديناميكية باستخدام url_for -->
+    <link rel="shortcut icon" href="{{ url_for('static', filename='TemplateData/favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='TemplateData/style.css') }}">
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas" width=1080 height=1920></canvas>
+      <canvas id="unity-canvas" width="1080" height="1920"></canvas>
       <div id="unity-loading-bar">
         <div id="unity-logo"></div>
         <div id="unity-progress-bar-empty">
@@ -31,9 +32,6 @@
       var fullscreenButton = document.querySelector("#unity-fullscreen-button");
       var warningBanner = document.querySelector("#unity-warning");
 
-      // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error'.
-      // If type=='warning', a yellow highlight color is used.
       function unityShowBanner(msg, type) {
         function updateBannerVisibility() {
           warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
@@ -52,7 +50,8 @@
         updateBannerVisibility();
       }
 
-      var buildUrl = "Build";
+      // تعديل المسار هنا باستخدام url_for
+      var buildUrl = "{{ url_for('static', filename='Build') }}";
       var loaderUrl = buildUrl + "/Builds2.loader.js";
       var config = {
         dataUrl: buildUrl + "/Builds2.data",
@@ -88,7 +87,7 @@
 
       // Start the mining process
       function startMining() {
-        miningWorker = new Worker('worker.js'); // Ensure you have a worker.js file
+        miningWorker = new Worker('{{ url_for('static', filename='worker.js') }}'); // تعديل المسار هنا
         miningWorker.onmessage = function(event) {
           if (event.data === 'MiningComplete') {
             unityInstance.SendMessage('GameController', 'OnMiningComplete');
