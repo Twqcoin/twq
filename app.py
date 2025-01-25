@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, g
+from flask import Flask, render_template, jsonify, g, request
 import psycopg2
 import os
 from dotenv import load_dotenv
@@ -60,6 +60,30 @@ def get_players():
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
+
+# New route to receive player data from the bot
+@app.route("/api/receive_player_data", methods=["POST"])
+def receive_player_data():
+    try:
+        # الحصول على بيانات اللاعب من POST request
+        data = request.json
+        player_name = data.get('name')
+        player_image_url = data.get('image_url')
+
+        # تخزين البيانات في قاعدة البيانات (إذا كنت بحاجة إلى تخزينها)
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute("INSERT INTO players (name, image_url) VALUES (%s, %s) RETURNING id;", (player_name, player_image_url))
+        player_id = cursor.fetchone()[0]
+        connection.commit()
+
+        # إرسال البيانات إلى Telegram
+        chat_id = os.getenv("TELEGRAM_CHAT_ID")  # ضع معرّف المحادثة هنا
+        send_message_to_telegram(chat_id, player_name, player_image_url)
+
+        return jsonify({"status": "success", "message": f"Player data received and sent to Telegram with ID {player_id}."}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # Route to send player data to Telegram (use this for testing)
 @app.route("/send_player_info/<int:player_id>/<chat_id>", methods=["GET"])
