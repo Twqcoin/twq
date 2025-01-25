@@ -8,6 +8,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='TemplateData/style.css') }}">
   </head>
   <body>
+    <!-- عناصر لعرض بيانات المستخدم -->
+    <div id="user-info">
+        <img id="user-photo" src="" alt="User Photo" style="width: 50px; height: 50px; border-radius: 50%;">
+        <p id="user-name"></p>
+    </div>
+
     <div id="unity-container" class="unity-desktop">
       <canvas id="unity-canvas" width="1920" height="1040"></canvas>
       <div id="unity-loading-bar">
@@ -24,6 +30,23 @@
       </div>
     </div>
     <script>
+      // تهيئة Telegram Web App
+      Telegram.WebApp.ready();
+
+      // جلب بيانات المستخدم
+      const user = Telegram.WebApp.initDataUnsafe.user;
+
+      if (user) {
+          const userName = user.first_name; // اسم المستخدم
+          const userPhoto = user.photo_url; // رابط صورة المستخدم
+
+          // عرض البيانات في التطبيق
+          document.getElementById('user-name').innerText = userName;
+          document.getElementById('user-photo').src = userPhoto;
+      } else {
+          console.log("User data not available.");
+      }
+
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
       var loadingBar = document.querySelector("#unity-loading-bar");
