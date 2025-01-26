@@ -15,8 +15,8 @@ def make_celery(app):
     return celery
 
 # تعيين المتغيرات البيئية
-app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
-app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
+app.config['CELERY_BROKER_URL'] = 'redis://red-cu23f1tsvqrc73f22svg:6379'
+app.config['CELERY_RESULT_BACKEND'] = 'redis://red-cu23f1tsvqrc73f22svg:6379'
 
 # إنشاء Celery
 celery = make_celery(app)
