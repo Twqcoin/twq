@@ -6,21 +6,21 @@ services:
     startCommand: gunicorn app:app
     envVars:
       - key: TELEGRAM_BOT_TOKEN
-        value: your_telegram_bot_token
+        value: <your_telegram_bot_token>
       - key: TELEGRAM_CHAT_ID
-        value: your_chat_id
+        value: <your_chat_id>
       - key: DB_HOST
-        value: your_db_host
+        value: <your_db_host>
       - key: DB_NAME
-        value: your_db_name
+        value: <your_db_name>
       - key: DB_USER
-        value: your_db_user
+        value: <your_db_user>
       - key: DB_PASSWORD
-        value: your_db_password
+        value: <your_db_password>
       - key: CELERY_BROKER_URL
-        value: redis://your_redis_host:6379/0
+        value: redis://twq-redis:6379/0
       - key: CELERY_RESULT_BACKEND
-        value: redis://your_redis_host:6379/0
+        value: redis://twq-redis:6379/0
 
   - type: redis
     name: twq-redis
