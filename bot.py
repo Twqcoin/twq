@@ -26,16 +26,17 @@ def get_db_connection():
             return None
 
         result = urlparse(database_url)
+        logger.info(f"محاولة الاتصال بقاعدة البيانات: host={result.hostname}, db={result.path[1:]}")
         conn = psycopg2.connect(
-            database=result.path[1:],  # استبعاد أول / في الـ path
+            database=result.path[1:],
             user=result.username,
             password=result.password,
             host=result.hostname,
-            port=result.port,  # إذا كان المنفذ غير موجود في الرابط، سيتم استخدام المنفذ الافتراضي 5432
-            sslmode='disable',  # تعطيل التحقق من الشهادة SSL
-            #sslmode='require',  # إذا كنت ترغب في التحقق من SSL
-            #sslrootcert=certifi.where()  # استخدم هذا في حالة التحقق من الشهادة SSL
+            port=result.port,
+            sslmode='require',
+            sslrootcert=certifi.where()
         )
+        logger.info("تم الاتصال بقاعدة البيانات بنجاح!")
         return conn
     except Exception as e:
         logger.error(f"فشل الاتصال بقاعدة البيانات: {e}", exc_info=True)
@@ -47,20 +48,19 @@ def create_db():
     إنشاء جدول players إذا لم يكن موجودًا.
     """
     try:
-        conn = get_db_connection()
-        if conn is None:
-            logger.error("لا يمكن إنشاء قاعدة البيانات. لم يتم الاتصال بالخادم.")
-            return
+        with get_db_connection() as conn:
+            if conn is None:
+                logger.error("لا يمكن إنشاء قاعدة البيانات. لم يتم الاتصال بالخادم.")
+                return
 
-        with conn.cursor() as cursor:
-            # إنشاء جدول لتخزين بيانات اللاعبين
-            cursor.execute('''CREATE TABLE IF NOT EXISTS players (
-                                id SERIAL PRIMARY KEY,
-                                name TEXT NOT NULL,
-                                image_url TEXT NOT NULL,
-                                progress INTEGER DEFAULT 0)''')
-            conn.commit()
-        conn.close()
+            with conn.cursor() as cursor:
+                # إنشاء جدول لتخزين بيانات اللاعبين
+                cursor.execute('''CREATE TABLE IF NOT EXISTS players (
+                                    id SERIAL PRIMARY KEY,
+                                    name TEXT NOT NULL,
+                                    image_url TEXT NOT NULL,
+                                    progress INTEGER DEFAULT 0)''')
+                conn.commit()
     except Exception as e:
         logger.error(f"حدث خطأ أثناء إنشاء الجدول: {e}", exc_info=True)
 
@@ -70,16 +70,15 @@ def add_player_to_db(player_name, player_image_url):
     إضافة لاعب جديد إلى قاعدة البيانات.
     """
     try:
-        conn = get_db_connection()
-        if conn is None:
-            logger.error("لا يمكن إضافة اللاعب. لم يتم الاتصال بقاعدة البيانات.")
-            return
+        with get_db_connection() as conn:
+            if conn is None:
+                logger.error("لا يمكن إضافة اللاعب. لم يتم الاتصال بقاعدة البيانات.")
+                return
 
-        with conn.cursor() as cursor:
-            cursor.execute("INSERT INTO players (name, image_url, progress) VALUES (%s, %s, %s)", 
-                           (player_name, player_image_url, 0))  # 0 تعني تقدم اللاعب الأولي
-            conn.commit()
-        conn.close()
+            with conn.cursor() as cursor:
+                cursor.execute("INSERT INTO players (name, image_url, progress) VALUES (%s, %s, %s)", 
+                               (player_name, player_image_url, 0))  # 0 تعني تقدم اللاعب الأولي
+                conn.commit()
     except Exception as e:
         logger.error(f"حدث خطأ أثناء إضافة اللاعب: {e}", exc_info=True)
 
@@ -89,15 +88,14 @@ def update_player_progress(player_name, progress):
     تحديث تقدم لاعب في قاعدة البيانات.
     """
     try:
-        conn = get_db_connection()
-        if conn is None:
-            logger.error("لا يمكن تحديث التقدم. لم يتم الاتصال بقاعدة البيانات.")
-            return
+        with get_db_connection() as conn:
+            if conn is None:
+                logger.error("لا يمكن تحديث التقدم. لم يتم الاتصال بقاعدة البيانات.")
+                return
 
-        with conn.cursor() as cursor:
-            cursor.execute("UPDATE players SET progress = %s WHERE name = %s", (progress, player_name))
-            conn.commit()
-        conn.close()
+            with conn.cursor() as cursor:
+                cursor.execute("UPDATE players SET progress = %s WHERE name = %s", (progress, player_name))
+                conn.commit()
     except Exception as e:
         logger.error(f"حدث خطأ أثناء تحديث التقدم: {e}", exc_info=True)
 
@@ -107,15 +105,15 @@ def get_player_progress(player_name):
     استرجاع تقدم لاعب من قاعدة البيانات.
     """
     try:
-        conn = get_db_connection()
-        if conn is None:
-            logger.error("لا يمكن استرجاع التقدم. لم يتم الاتصال بقاعدة البيانات.")
-            return None
+        with get_db_connection() as conn:
+            if conn is None:
+                logger.error("لا يمكن استرجاع التقدم. لم يتم الاتصال بقاعدة البيانات.")
+                return None
 
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT progress FROM players WHERE name = %s", (player_name,))
-            progress = cursor.fetchone()
-            return progress[0] if progress else None
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT progress FROM players WHERE name = %s", (player_name,))
+                progress = cursor.fetchone()
+                return progress[0] if progress else None
     except Exception as e:
         logger.error(f"حدث خطأ أثناء استرجاع التقدم: {e}", exc_info=True)
         return None
@@ -200,6 +198,18 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     await update.message.reply_text(help_text)
 
+# تعريف أمر /test_db
+async def test_db(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    اختبار الاتصال بقاعدة البيانات.
+    """
+    conn = get_db_connection()
+    if conn:
+        await update.message.reply_text("تم الاتصال بقاعدة البيانات بنجاح!")
+        conn.close()
+    else:
+        await update.message.reply_text("فشل الاتصال بقاعدة البيانات.")
+
 # تشغيل البوت
 def main():
     """
@@ -218,6 +228,7 @@ def main():
     application.add_handler(CommandHandler("add_player", add_player))
     application.add_handler(CommandHandler("progress", progress))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("test_db", test_db))
 
     # تأكد من أن قاعدة البيانات موجودة
     create_db()
