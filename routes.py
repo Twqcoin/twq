@@ -4,6 +4,10 @@ import psycopg2
 import os
 import requests
 import logging
+from dotenv import load_dotenv
+
+# تحميل المتغيرات البيئية
+load_dotenv()
 
 # إعداد تسجيل الأخطاء
 logging.basicConfig(level=logging.INFO)
@@ -19,6 +23,22 @@ def get_db_connection():
             password=os.getenv("DB_PASSWORD")
         )
     return g.db
+
+# إرسال رسالة إلى Telegram
+def send_message_to_telegram(chat_id, player_name, player_image_url):
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    if not bot_token:
+        raise ValueError("Telegram bot token is missing.")
+
+    message = f"New player added:\nName: {player_name}\nImage URL: {player_image_url}"
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": message
+    }
+    response = requests.post(url, json=payload)
+    if response.status_code != 200:
+        raise Exception(f"Failed to send message to Telegram: {response.text}")
 
 # استقبال بيانات اللاعب
 @app.route("/api/receive_player_data", methods=["POST"])
