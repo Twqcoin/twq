@@ -1,44 +1,20 @@
-from flask import Flask, request, jsonify
+import os
 import psycopg2
-import redis
 
-app = Flask(__name__)
-
-# PostgreSQL connection
+# الاتصال بقاعدة البيانات
 conn = psycopg2.connect(
-    dbname="YOUR_DB_NAME",
-    user="YOUR_DB_USER",
-    password="YOUR_DB_PASSWORD",
-    host="YOUR_DB_HOST",
-    port="YOUR_DB_PORT"
+    dbname=os.getenv("DB_NAME"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD"),
+    host=os.getenv("DB_HOST"),
+    port=int(os.getenv("DB_PORT", 5432))  # استخدام المنفذ الافتراضي 5432 إذا لم يتم تحديده
 )
 
-# Redis connection
-redis_client = redis.Redis(
-    host='YOUR_REDIS_HOST',
-    port=YOUR_REDIS_PORT,
-    password='YOUR_REDIS_PASSWORD'
-)
+# إنشاء جدول (مثال)
+cursor = conn.cursor()
+cursor.execute("CREATE TABLE IF NOT EXISTS players (id SERIAL PRIMARY KEY, name TEXT, wallet TEXT)")
+conn.commit()
 
-@app.route('/player-data', methods=['POST'])
-def player_data():
-    data = request.json
-    player_id = data.get('playerId')
-    player_name = data.get('playerName')
-    wallet_address = data.get('walletAddress')
-
-    # تخزين البيانات في PostgreSQL
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO players (id, name, wallet) VALUES (%s, %s, %s)",
-        (player_id, player_name, wallet_address)
-    )
-    conn.commit()
-
-    # تخزين حالة التعدين في Redis
-    redis_client.set(f'player:{player_id}:mining', 'active')
-
-    return jsonify({"message": "تم استقبال البيانات بنجاح!"}), 200
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+# إغلاق الاتصال
+cursor.close()
+conn.close()
