@@ -1,18 +1,45 @@
-from flask import Flask, jsonify
+from flask import Flask
+from celery import Celery
 
-# 1. إنشاء تطبيق Flask
+# تهيئة Flask
 app = Flask(__name__)
 
-# 2. تعريف مسار بسيط للصفحة الرئيسية
-@app.route('/')
-def home():
-    return jsonify({"message": "مرحبًا، هذا تطبيق Flask يعمل على Render!"})
+# تهيئة Celery
+def make_celery(app):
+    celery = Celery(
+        app.import_name,
+        backend=app.config['CELERY_RESULT_BACKEND'],
+        broker=app.config['CELERY_BROKER_URL']
+    )
+    celery.conf.update(app.config)
+    return celery
 
-# 3. تعريف مسار آخر كمثال
-@app.route('/about')
-def about():
-    return jsonify({"message": "هذه صفحة حول التطبيق."})
+# تعيين المتغيرات البيئية
+app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
+app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
 
-# 4. تشغيل التطبيق (هذا الجزء غير مطلوب عند استخدام gunicorn)
+# إنشاء Celery
+celery = make_celery(app)
+
+# مثال على مهمة Celery
+@celery.task
+def send_telegram_message(message):
+    import requests
+    bot_token = app.config['TELEGRAM_BOT_TOKEN']
+    chat_id = app.config['TELEGRAM_CHAT_ID']
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": message
+    }
+    requests.post(url, json=payload)
+
+# واجهة API لاختبار Celery
+@app.route('/send_message')
+def send_message():
+    send_telegram_message.delay("Hello from Celery!")
+    return "Message sent to Telegram in the background!"
+
+# تشغيل التطبيق
 if __name__ == '__main__':
     app.run(debug=True)
