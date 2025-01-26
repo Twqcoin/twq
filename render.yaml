@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: twq
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn run:app
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        value: your_telegram_bot_token
+      - key: TELEGRAM_CHAT_ID
+        value: your_chat_id
+      - key: DB_HOST
+        value: your_db_host
+      - key: DB_NAME
+        value: your_db_name
+      - key: DB_USER
+        value: your_db_user
+      - key: DB_PASSWORD
+        value: your_db_password
+      - key: CELERY_BROKER_URL
+        value: ${CELERY_BROKER_URL}  # سيتم تعيينه من ملف .env
+      - key: CELERY_RESULT_BACKEND
+        value: ${CELERY_RESULT_BACKEND}  # سيتم تعيينه من ملف .env
