@@ -1,18 +1,10 @@
 from flask import Flask
-from celery import Celery
-from config import Config
 
-# إنشاء تطبيق Flask
+# إنشاء نسخة Flask
 app = Flask(__name__)
-app.config.from_object(Config)
 
-# إعداد Celery
-celery = Celery(
-    app.import_name,
-    backend=app.config['CELERY_RESULT_BACKEND'],
-    broker=app.config['CELERY_BROKER_URL']
-)
-celery.conf.update(app.config)
+# تهيئة الإعدادات
+app.config.from_object('config.Config')
 
-# استيراد نقاط النهاية والمهام
-from app import routes, tasks
+# تسجيل نقاط النهاية (Routes)
+from app import routes
