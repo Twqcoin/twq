@@ -1,20 +1,18 @@
-import os
-import psycopg2
+from flask import Flask, jsonify
 
-# الاتصال بقاعدة البيانات
-conn = psycopg2.connect(
-    dbname=os.getenv("DB_NAME"),
-    user=os.getenv("DB_USER"),
-    password=os.getenv("DB_PASSWORD"),
-    host=os.getenv("DB_HOST"),
-    port=int(os.getenv("DB_PORT", 5432))  # استخدام المنفذ الافتراضي 5432 إذا لم يتم تحديده
-)
+# 1. إنشاء تطبيق Flask
+app = Flask(__name__)
 
-# إنشاء جدول (مثال)
-cursor = conn.cursor()
-cursor.execute("CREATE TABLE IF NOT EXISTS players (id SERIAL PRIMARY KEY, name TEXT, wallet TEXT)")
-conn.commit()
+# 2. تعريف مسار بسيط للصفحة الرئيسية
+@app.route('/')
+def home():
+    return jsonify({"message": "مرحبًا، هذا تطبيق Flask يعمل على Render!"})
 
-# إغلاق الاتصال
-cursor.close()
-conn.close()
+# 3. تعريف مسار آخر كمثال
+@app.route('/about')
+def about():
+    return jsonify({"message": "هذه صفحة حول التطبيق."})
+
+# 4. تشغيل التطبيق (هذا الجزء غير مطلوب عند استخدام gunicorn)
+if __name__ == '__main__':
+    app.run(debug=True)
