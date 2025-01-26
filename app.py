@@ -1,8 +1,13 @@
 from flask import Flask
 from celery import Celery
+import os  # لاستخدام المتغيرات البيئية
 
 # تهيئة Flask
 app = Flask(__name__)
+
+# تعيين عنوان Redis من المتغيرات البيئية
+app.config['CELERY_BROKER_URL'] = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+app.config['CELERY_RESULT_BACKEND'] = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 
 # تهيئة Celery
 def make_celery(app):
@@ -14,10 +19,6 @@ def make_celery(app):
     celery.conf.update(app.config)
     return celery
 
-# تعيين المتغيرات البيئية
-app.config['CELERY_BROKER_URL'] = 'redis://red-cu23f1tsvqrc73f22svg:6379'
-app.config['CELERY_RESULT_BACKEND'] = 'redis://red-cu23f1tsvqrc73f22svg:6379'
-
 # إنشاء Celery
 celery = make_celery(app)
 
@@ -25,8 +26,8 @@ celery = make_celery(app)
 @celery.task
 def send_telegram_message(message):
     import requests
-    bot_token = app.config['TELEGRAM_BOT_TOKEN']
-    chat_id = app.config['TELEGRAM_CHAT_ID']
+    bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')  # استرداد رمز البوت من المتغيرات البيئية
+    chat_id = os.environ.get('TELEGRAM_CHAT_ID')  # استرداد معرف الدردشة من المتغيرات البيئية
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {
         "chat_id": chat_id,
