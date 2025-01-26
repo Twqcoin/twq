@@ -1,6 +1,6 @@
-from flask import Flask
+from flask import Flask, render_template
 from celery import Celery
-import os  # لاستخدام المتغيرات البيئية
+import os
 import requests  # لاستيراد المكتبة بشكل عام
 
 # تهيئة Flask
@@ -48,13 +48,7 @@ def send_message():
 # مسار الصفحة الرئيسية
 @app.route('/')
 def home():
-    return """
-    <h1>Welcome to Flask with Celery!</h1>
-    <p>Use the following endpoints to interact with the app:</p>
-    <ul>
-        <li><strong>/send_message</strong>: Sends a test message to Telegram.</li>
-    </ul>
-    """
+    return render_template('index.html')  # يعرض ملف HTML من مجلد templates
 
 # تشغيل التطبيق
 if __name__ == '__main__':
