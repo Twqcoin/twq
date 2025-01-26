@@ -32,8 +32,9 @@ def get_db_connection():
             password=result.password,
             host=result.hostname,
             port=result.port,  # إذا كان المنفذ غير موجود في الرابط، سيتم استخدام المنفذ الافتراضي 5432
-            sslmode='require',  # تأكد من أن SSL مفعل
-            sslrootcert=certifi.where()  # استخدام شهادات SSL موثوقة
+            sslmode='disable',  # تعطيل التحقق من الشهادة SSL
+            #sslmode='require',  # إذا كنت ترغب في التحقق من SSL
+            #sslrootcert=certifi.where()  # استخدم هذا في حالة التحقق من الشهادة SSL
         )
         return conn
     except Exception as e:
