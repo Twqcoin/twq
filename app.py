@@ -4,9 +4,14 @@ import os
 import requests
 import psycopg2
 from urllib.parse import urlparse
+import logging
 
 # تهيئة Flask
 app = Flask(__name__)
+
+# تهيئة السجل
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # تعيين عنوان Redis من المتغيرات البيئية
 app.config['CELERY_BROKER_URL'] = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
@@ -32,7 +37,13 @@ def get_db_connection():
     """
     try:
         database_url = os.getenv("DATABASE_URL")
+        if not database_url:
+            logger.error("DATABASE_URL غير موجود في المتغيرات البيئية.")
+            return None
+
         result = urlparse(database_url)
+        logger.info(f"محاولة الاتصال بقاعدة البيانات: {result.hostname}, {result.path[1:]}")
+
         conn = psycopg2.connect(
             database=result.path[1:],
             user=result.username,
@@ -40,9 +51,10 @@ def get_db_connection():
             host=result.hostname,
             port=result.port
         )
+        logger.info("تم الاتصال بقاعدة البيانات بنجاح!")
         return conn
     except Exception as e:
-        print(f"Error connecting to database: {e}")
+        logger.error(f"فشل الاتصال بقاعدة البيانات: {e}", exc_info=True)
         return None
 
 # تحديث تقدم اللاعب في قاعدة البيانات
@@ -56,8 +68,9 @@ def update_player_progress(player_name, progress):
             with conn.cursor() as cursor:
                 cursor.execute("UPDATE players SET progress = %s WHERE name = %s", (progress, player_name))
                 conn.commit()
+                logger.info(f"تم تحديث تقدم اللاعب {player_name} إلى {progress}%")
         except Exception as e:
-            print(f"Error updating player progress: {e}")
+            logger.error(f"خطأ في تحديث تقدم اللاعب: {e}", exc_info=True)
         finally:
             conn.close()
 
@@ -74,8 +87,9 @@ def send_telegram_message(message):
     try:
         response = requests.post(url, json=payload)
         response.raise_for_status()
+        logger.info(f"تم إرسال الرسالة إلى Telegram: {message}")
     except requests.exceptions.RequestException as e:
-        print(f"Error sending message: {e}")
+        logger.error(f"خطأ في إرسال الرسالة: {e}", exc_info=True)
 
 # مسار لتحديث تقدم اللاعب
 @app.route('/update_progress', methods=['POST'])
