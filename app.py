@@ -9,7 +9,7 @@ import logging
 # تهيئة Flask
 app = Flask(__name__)
 
-# تهيئة السجل
+# إعداد سجلات التتبع
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -37,13 +37,7 @@ def get_db_connection():
     """
     try:
         database_url = os.getenv("DATABASE_URL")
-        if not database_url:
-            logger.error("DATABASE_URL غير موجود في المتغيرات البيئية.")
-            return None
-
         result = urlparse(database_url)
-        logger.info(f"محاولة الاتصال بقاعدة البيانات: {result.hostname}, {result.path[1:]}")
-
         conn = psycopg2.connect(
             database=result.path[1:],
             user=result.username,
@@ -51,10 +45,10 @@ def get_db_connection():
             host=result.hostname,
             port=result.port
         )
-        logger.info("تم الاتصال بقاعدة البيانات بنجاح!")
+        logger.info("Connected to PostgreSQL database successfully.")
         return conn
     except Exception as e:
-        logger.error(f"فشل الاتصال بقاعدة البيانات: {e}", exc_info=True)
+        logger.error(f"Error connecting to database: {e}")
         return None
 
 # تحديث تقدم اللاعب في قاعدة البيانات
@@ -68,9 +62,9 @@ def update_player_progress(player_name, progress):
             with conn.cursor() as cursor:
                 cursor.execute("UPDATE players SET progress = %s WHERE name = %s", (progress, player_name))
                 conn.commit()
-                logger.info(f"تم تحديث تقدم اللاعب {player_name} إلى {progress}%")
+                logger.info(f"Player progress updated for {player_name} to {progress}%.")
         except Exception as e:
-            logger.error(f"خطأ في تحديث تقدم اللاعب: {e}", exc_info=True)
+            logger.error(f"Error updating player progress: {e}")
         finally:
             conn.close()
 
@@ -87,15 +81,17 @@ def send_telegram_message(message):
     try:
         response = requests.post(url, json=payload)
         response.raise_for_status()
-        logger.info(f"تم إرسال الرسالة إلى Telegram: {message}")
+        logger.info(f"Message sent to Telegram: {message}")
     except requests.exceptions.RequestException as e:
-        logger.error(f"خطأ في إرسال الرسالة: {e}", exc_info=True)
+        logger.error(f"Error sending message: {e}")
 
 # مسار لتحديث تقدم اللاعب
 @app.route('/update_progress', methods=['POST'])
 def update_progress():
     player_name = request.json.get('name')
     progress = request.json.get('progress')
+
+    logger.info(f"Received request to update progress for player: {player_name} with progress: {progress}")
 
     if not player_name or not progress:
         return jsonify({"error": "Missing player name or progress"}), 400
@@ -111,8 +107,10 @@ def update_progress():
 # مسار الصفحة الرئيسية
 @app.route('/')
 def home():
+    logger.info("Rendering the home page.")
     return render_template('index.html')  # يعرض ملف HTML من مجلد templates
 
 # تشغيل التطبيق
 if __name__ == '__main__':
+    logger.info("Starting the Flask application...")
     app.run(debug=True, host='0.0.0.0', port=10000)
