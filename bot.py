@@ -27,14 +27,16 @@ def get_db_connection():
 
         result = urlparse(database_url)
         logger.info(f"محاولة الاتصال بقاعدة البيانات: host={result.hostname}, db={result.path[1:]}")
+
+        # إعداد اتصال بقاعدة البيانات
         conn = psycopg2.connect(
             database=result.path[1:],
             user=result.username,
             password=result.password,
             host=result.hostname,
             port=result.port,
-            sslmode='require',
-            sslrootcert=certifi.where()
+            sslmode='require' if 'sslmode=require' in database_url else 'disable',  # تحديد SSL بناءً على DATABASE_URL
+            sslrootcert=certifi.where() if 'sslmode=require' in database_url else None  # استخدام شهادة SSL إذا لزم الأمر
         )
         logger.info("تم الاتصال بقاعدة البيانات بنجاح!")
         return conn
