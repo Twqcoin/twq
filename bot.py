@@ -225,7 +225,6 @@ def main():
 
     application = ApplicationBuilder() \
         .token(token) \
-        .read_latency(2) \
         .timeout(30) \
         .build()
 
