@@ -51,6 +51,20 @@ def get_db_connection():
         logger.error(f"Error connecting to database: {e}")
         return None
 
+# دالة لاختبار الاتصال بقاعدة البيانات
+def test_db_connection():
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                logger.info("Database connection test successful!")
+            conn.close()
+        except Exception as e:
+            logger.error(f"Error testing database connection: {e}")
+    else:
+        logger.error("Failed to connect to the database!")
+
 # دالة لإنشاء الجداول إذا لم تكن موجودة
 def create_tables():
     conn = get_db_connection()
@@ -147,6 +161,9 @@ def home():
 
 # تشغيل التطبيق
 if __name__ == '__main__':
+    # اختبار الاتصال بقاعدة البيانات
+    test_db_connection()
+
     # إنشاء الجداول في قاعدة البيانات إذا لم تكن موجودة
     create_tables()
     logger.info("Starting the Flask application...")
