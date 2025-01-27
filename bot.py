@@ -6,6 +6,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
 from urllib.parse import urlparse
+from flask import Flask, request
+from telegram import Bot
 
 # تحميل المتغيرات البيئية
 load_dotenv()
@@ -200,40 +202,43 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     await update.message.reply_text(help_text)
 
-# تعريف أمر /test_db
-async def test_db(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    اختبار الاتصال بقاعدة البيانات.
-    """
-    conn = get_db_connection()
-    if conn:
-        await update.message.reply_text("تم الاتصال بقاعدة البيانات بنجاح!")
-        conn.close()
-    else:
-        await update.message.reply_text("فشل الاتصال بقاعدة البيانات.")
+# إعداد Webhook باستخدام Flask
+app = Flask(__name__)
 
-# تشغيل البوت
+# تعيين Webhook للبوت
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    json_str = request.get_data().decode("UTF-8")
+    update = Update.de_json(json_str)
+    application.process_update(update)
+    return "OK", 200
+
+# تشغيل البوت باستخدام Webhook
 def main():
     """
-    تهيئة البوت وبدء التشغيل.
+    تهيئة البوت وبدء التشغيل باستخدام Webhook.
     """
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
         logger.error("لم يتم العثور على رمز البوت في المتغيرات البيئية.")
         return
 
-    application = ApplicationBuilder() \
-        .token(token) \
-        .build()
+    global application
+    application = ApplicationBuilder().token(token).build()
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("add_player", add_player))
     application.add_handler(CommandHandler("progress", progress))
     application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("test_db", test_db))
 
     create_db()
-    application.run_polling(allowed_updates=["message", "callback_query"])
+
+    # تعيين Webhook للبوت
+    bot = Bot(token=token)
+    bot.set_webhook(url="https://https://twq.onrender.com/webhook")
+
+    # تشغيل Flask في وضع الإنتاج
+    app.run(host="0.0.0.0", port=5000)
 
 if __name__ == "__main__":
     main()
