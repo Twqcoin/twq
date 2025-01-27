@@ -146,6 +146,9 @@ async def add_player(update: Update, context: ContextTypes.DEFAULT_TYPE):
         player_name = context.args[0] if context.args else None
         player_image_url = context.args[1] if len(context.args) > 1 else None
 
+        # التحقق من استقبال البيانات وطباعة السجل
+        logger.info(f"استلام بيانات: الاسم={player_name}, رابط الصورة={player_image_url}")
+
         if not player_name or not player_image_url:
             await update.message.reply_text("الاستخدام: /add_player <الاسم> <رابط الصورة>")
             return
@@ -170,6 +173,9 @@ async def progress(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not player_name:
             await update.message.reply_text("الاستخدام: /progress <الاسم>")
             return
+
+        # التحقق من استقبال بيانات اللاعب
+        logger.info(f"استلام طلب تقدم اللاعب: {player_name}")
 
         progress = get_player_progress(player_name)
         if progress is None:
