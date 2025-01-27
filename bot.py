@@ -35,8 +35,8 @@ def get_db_connection():
             password=result.password,
             host=result.hostname,
             port=result.port,
-            sslmode='require' if 'sslmode=require' in database_url else 'disable',  # تحديد SSL بناءً على DATABASE_URL
-            sslrootcert=certifi.where() if 'sslmode=require' in database_url else None  # استخدام شهادة SSL إذا لزم الأمر
+            sslmode='require' if 'sslmode=require' in database_url else 'disable',
+            sslrootcert=certifi.where() if 'sslmode=require' in database_url else None
         )
         logger.info("تم الاتصال بقاعدة البيانات بنجاح!")
         return conn
@@ -56,7 +56,6 @@ def create_db():
                 return
 
             with conn.cursor() as cursor:
-                # إنشاء جدول لتخزين بيانات اللاعبين
                 cursor.execute('''CREATE TABLE IF NOT EXISTS players (
                                     id SERIAL PRIMARY KEY,
                                     name TEXT NOT NULL,
@@ -79,7 +78,7 @@ def add_player_to_db(player_name, player_image_url):
 
             with conn.cursor() as cursor:
                 cursor.execute("INSERT INTO players (name, image_url, progress) VALUES (%s, %s, %s)", 
-                               (player_name, player_image_url, 0))  # 0 تعني تقدم اللاعب الأولي
+                               (player_name, player_image_url, 0))
                 conn.commit()
     except Exception as e:
         logger.error(f"حدث خطأ أثناء إضافة اللاعب: {e}", exc_info=True)
@@ -125,16 +124,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     بدء استخدام البوت وعرض زر "Play Game".
     """
-    # إنشاء زر "Play Game" مع الرابط الخاص بـ Web App
     keyboard = [
         [InlineKeyboardButton(
             text="Play Game",
-            web_app={"url": "https://twq.onrender.com"}  # رابط التطبيق الذي تريد فتحه داخل Telegram
+            web_app={"url": "https://twq.onrender.com"}
         )]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # إرسال الرسالة مع الزر
     await update.message.reply_text(
         "مرحبًا! اضغط على الزر أدناه للعب:",
         reply_markup=reply_markup
@@ -146,7 +143,6 @@ async def add_player(update: Update, context: ContextTypes.DEFAULT_TYPE):
     إضافة لاعب جديد إلى قاعدة البيانات.
     """
     try:
-        # الحصول على بيانات اللاعب من الرسالة
         player_name = context.args[0] if context.args else None
         player_image_url = context.args[1] if len(context.args) > 1 else None
 
@@ -154,12 +150,10 @@ async def add_player(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("الاستخدام: /add_player <الاسم> <رابط الصورة>")
             return
 
-        # تحقق من أن player_image_url هو رابط صحيح
         if not player_image_url.startswith(("http://", "https://")):
             await update.message.reply_text("رابط الصورة غير صالح. يجب أن يبدأ بـ http:// أو https://")
             return
 
-        # إضافة اللاعب إلى قاعدة البيانات
         add_player_to_db(player_name, player_image_url)
         await update.message.reply_text(f"تم إضافة اللاعب {player_name} بنجاح!")
     except Exception as e:
@@ -217,7 +211,6 @@ def main():
     """
     تهيئة البوت وبدء التشغيل.
     """
-    # تهيئة البوت
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
         logger.error("لم يتم العثور على رمز البوت في المتغيرات البيئية.")
@@ -225,20 +218,15 @@ def main():
 
     application = ApplicationBuilder() \
         .token(token) \
-        .timeout(30) \
         .build()
 
-    # إضافة الأوامر
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("add_player", add_player))
     application.add_handler(CommandHandler("progress", progress))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("test_db", test_db))
 
-    # تأكد من أن قاعدة البيانات موجودة
     create_db()
-
-    # بدء البوت
     application.run_polling(allowed_updates=["message", "callback_query"])
 
 if __name__ == "__main__":
