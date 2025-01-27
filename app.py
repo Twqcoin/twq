@@ -13,11 +13,10 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# تعيين عنوان Redis من المتغيرات البيئية
-app.config['CELERY_BROKER_URL'] = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-app.config['CELERY_RESULT_BACKEND'] = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+# تهيئة Celery مع PostgreSQL كبديل لـ Redis
+app.config['CELERY_BROKER_URL'] = 'sqla+postgresql://user:password@localhost/dbname'  # استبدل ببيانات الاتصال الخاصة بك
+app.config['CELERY_RESULT_BACKEND'] = 'db+postgresql://user:password@localhost/dbname'  # استبدل ببيانات الاتصال الخاصة بك
 
-# تهيئة Celery
 def make_celery(app):
     celery = Celery(
         app.import_name,
@@ -120,6 +119,9 @@ def update_player_progress(player_name, progress):
 # إرسال رسالة عبر Telegram
 @celery.task
 def send_telegram_message(message):
+    """
+    إرسال رسالة إلى Telegram بشكل غير متزامن باستخدام Celery.
+    """
     bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
     chat_id = os.environ.get('TELEGRAM_CHAT_ID')
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -148,7 +150,7 @@ def update_progress():
     # تحديث تقدم اللاعب في قاعدة البيانات
     update_player_progress(player_name, progress)
 
-    # إرسال إشعار إلى Telegram
+    # إرسال إشعار إلى Telegram بشكل غير متزامن
     send_telegram_message.delay(f"Player {player_name} progress updated to {progress}%")
 
     return jsonify({"message": "Progress updated successfully!"})
