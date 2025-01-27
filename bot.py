@@ -223,7 +223,11 @@ def main():
         logger.error("لم يتم العثور على رمز البوت في المتغيرات البيئية.")
         return
 
-    application = ApplicationBuilder().token(token).build()
+    application = ApplicationBuilder() \
+        .token(token) \
+        .read_latency(2) \
+        .timeout(30) \
+        .build()
 
     # إضافة الأوامر
     application.add_handler(CommandHandler("start", start))
@@ -236,7 +240,7 @@ def main():
     create_db()
 
     # بدء البوت
-    application.run_polling()
+    application.run_polling(allowed_updates=["message", "callback_query"])
 
 if __name__ == "__main__":
     main()
