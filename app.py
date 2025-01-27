@@ -37,12 +37,16 @@ def get_db_connection():
     try:
         database_url = os.getenv("DATABASE_URL")
         result = urlparse(database_url)
+
+        # جلب المنفذ من المتغير البيئي DB_PORT أو استخدام 5432 كمنفذ افتراضي
+        db_port = os.getenv("DB_PORT", 5432)
+
         conn = psycopg2.connect(
-            database=result.path[1:],
-            user=result.username,
-            password=result.password,
-            host=result.hostname,
-            port=result.port
+            database=result.path[1:],  # استخراج اسم قاعدة البيانات من URL
+            user=result.username,       # اسم المستخدم
+            password=result.password,   # كلمة المرور
+            host=result.hostname,       # اسم المضيف
+            port=db_port                # استخدام المنفذ من المتغير البيئي أو الافتراضي
         )
         logger.info("Connected to PostgreSQL database successfully.")
         return conn
