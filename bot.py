@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from urllib.parse import urlparse
 from flask import Flask, request
 from telegram import Bot
+import asyncio
 
 # تحميل المتغيرات البيئية
 load_dotenv()
@@ -214,7 +215,7 @@ def webhook():
     return "OK", 200
 
 # تشغيل البوت باستخدام Webhook
-def main():
+async def main():
     """
     تهيئة البوت وبدء التشغيل باستخدام Webhook.
     """
@@ -235,10 +236,10 @@ def main():
 
     # تعيين Webhook للبوت
     bot = Bot(token=token)
-    bot.set_webhook(url="https://https://twq.onrender.com/webhook")
+    await bot.set_webhook(url="https://twq.onrender.com/webhook")
 
     # تشغيل Flask في وضع الإنتاج
     app.run(host="0.0.0.0", port=5000)
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
