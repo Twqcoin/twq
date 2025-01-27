@@ -51,6 +51,41 @@ def get_db_connection():
         logger.error(f"Error connecting to database: {e}")
         return None
 
+# دالة لإنشاء الجداول إذا لم تكن موجودة
+def create_tables():
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                # جدول اللاعبين
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS players (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(255) UNIQUE NOT NULL,
+                    progress INT DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                """)
+
+                # جدول المهمات
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id SERIAL PRIMARY KEY,
+                    description TEXT NOT NULL,  -- وصف المهمة
+                    reward INT,                 -- مكافأة إتمام المهمة
+                    is_completed BOOLEAN DEFAULT FALSE,  -- حالة إتمام المهمة
+                    player_id INT REFERENCES players(id), -- مرجع للاعب
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- وقت إضافة المهمة
+                );
+                """)
+
+                conn.commit()
+                logger.info("Tables created successfully (if not already exist).")
+        except Exception as e:
+            logger.error(f"Error creating tables: {e}")
+        finally:
+            conn.close()
+
 # تحديث تقدم اللاعب في قاعدة البيانات
 def update_player_progress(player_name, progress):
     """
@@ -112,5 +147,7 @@ def home():
 
 # تشغيل التطبيق
 if __name__ == '__main__':
+    # إنشاء الجداول في قاعدة البيانات إذا لم تكن موجودة
+    create_tables()
     logger.info("Starting the Flask application...")
     app.run(debug=True, host='0.0.0.0', port=10000)
