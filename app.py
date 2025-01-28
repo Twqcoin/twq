@@ -5,6 +5,10 @@ import requests
 import psycopg2
 from urllib.parse import urlparse
 import logging
+from dotenv import load_dotenv
+
+# تحميل المتغيرات البيئية من ملف .env
+load_dotenv()
 
 # تهيئة Flask
 app = Flask(__name__)
@@ -14,8 +18,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # تهيئة Celery مع Redis كوسيط (بدلاً من PostgreSQL)
-app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'  # استبدل ببيانات الاتصال الخاصة بك
-app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'  # استبدل ببيانات الاتصال الخاصة بك
+app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')  # استبدل ببيانات الاتصال الخاصة بك
+app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')  # استبدل ببيانات الاتصال الخاصة بك
 
 def make_celery(app):
     celery = Celery(
@@ -126,8 +130,8 @@ def send_telegram_message(message):
     """
     إرسال رسالة إلى Telegram بشكل غير متزامن باستخدام Celery.
     """
-    bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
-    chat_id = os.environ.get('TELEGRAM_CHAT_ID')
+    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+    chat_id = os.getenv('TELEGRAM_CHAT_ID')
     if not bot_token or not chat_id:
         logger.error("Telegram bot token or chat ID is missing!")
         return
