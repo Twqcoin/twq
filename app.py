@@ -13,9 +13,9 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# تهيئة Celery مع PostgreSQL كبديل لـ Redis
-app.config['CELERY_BROKER_URL'] = 'sqla+postgresql://user:password@localhost/dbname'  # استبدل ببيانات الاتصال الخاصة بك
-app.config['CELERY_RESULT_BACKEND'] = 'db+postgresql://user:password@localhost/dbname'  # استبدل ببيانات الاتصال الخاصة بك
+# تهيئة Celery مع Redis كوسيط (بدلاً من PostgreSQL)
+app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'  # استبدل ببيانات الاتصال الخاصة بك
+app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'  # استبدل ببيانات الاتصال الخاصة بك
 
 def make_celery(app):
     celery = Celery(
@@ -128,6 +128,9 @@ def send_telegram_message(message):
     """
     bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
     chat_id = os.environ.get('TELEGRAM_CHAT_ID')
+    if not bot_token or not chat_id:
+        logger.error("Telegram bot token or chat ID is missing!")
+        return
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {
         "chat_id": chat_id,
@@ -146,10 +149,15 @@ def update_progress():
     player_name = request.json.get('name')
     progress = request.json.get('progress')
 
-    logger.info(f"Received request to update progress for player: {player_name} with progress: {progress}")
-
     if not player_name or not progress:
         return jsonify({"error": "Missing player name or progress"}), 400
+
+    try:
+        progress = int(progress)
+        if progress < 0 or progress > 100:
+            return jsonify({"error": "Progress must be between 0 and 100"}), 400
+    except ValueError:
+        return jsonify({"error": "Progress must be a number"}), 400
 
     # تحديث تقدم اللاعب في قاعدة البيانات
     update_player_progress(player_name, progress)
