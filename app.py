@@ -74,6 +74,15 @@ def test_db_connection():
     else:
         logger.error("Failed to connect to the database!")
 
+# مسار لاختبار الاتصال بقاعدة البيانات
+@app.route('/test_connection', methods=['GET'])
+def test_connection():
+    conn = get_db_connection()
+    if conn:
+        return jsonify({"message": "Connected to database successfully!"})
+    else:
+        return jsonify({"error": "Failed to connect to the database."}), 500
+
 # دالة لإنشاء الجداول إذا لم تكن موجودة
 def create_tables():
     conn = get_db_connection()
