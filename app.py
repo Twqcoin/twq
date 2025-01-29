@@ -82,6 +82,23 @@ def get_db_connection():
             logger.info(f"إعادة المحاولة... المحاولات المتبقية: {attempts}")
             time.sleep(5)  # الانتظار قبل إعادة المحاولة
 
+# دالة لتحديث تقدم اللاعب في قاعدة البيانات
+def update_player_progress(player_name, progress):
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                # تعديل الجدول والتحديث حسب الحاجة
+                cursor.execute("""
+                    UPDATE players SET progress = %s WHERE name = %s;
+                """, (progress, player_name))
+                conn.commit()
+                logger.info(f"تم تحديث التقدم للاعب {player_name} إلى {progress}%")
+        except Exception as e:
+            logger.error(f"حدث خطأ أثناء تحديث التقدم: {e}")
+        finally:
+            conn.close()
+
 # مسار رئيسي لفتح التطبيق
 @app.route('/')
 def index():
@@ -96,6 +113,25 @@ def add_numbers(a, b):
 def add():
     result = add_numbers.apply_async((5, 7))  # حساب 5 + 7 باستخدام Celery
     return jsonify(result=result.get(timeout=10))  # الحصول على النتيجة
+
+# مسار لتحديث تقدم اللاعب
+@app.route('/update_progress', methods=['POST'])
+def update_progress():
+    try:
+        data = request.get_json()
+        player_name = data.get('name')
+        progress = data.get('progress')
+
+        if not player_name or progress is None:
+            return jsonify({'message': 'الاسم أو التقدم مفقود'}), 400
+
+        # هنا يمكنك تحديث التقدم في قاعدة البيانات
+        update_player_progress(player_name, progress)
+
+        return jsonify({'message': 'تم تحديث التقدم بنجاح!'}), 200
+    except Exception as e:
+        logger.error(f"حدث خطأ أثناء تحديث التقدم: {e}", exc_info=True)
+        return jsonify({'message': 'حدث خطأ أثناء تحديث التقدم'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=10000)
