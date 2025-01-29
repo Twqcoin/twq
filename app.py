@@ -71,15 +71,15 @@ def get_db_connection():
                 sslmode='require',
                 sslrootcert=certifi.where()
             )
-            logger.info("Connected to PostgreSQL database successfully.")
+            logger.info("تم الاتصال بقاعدة بيانات PostgreSQL بنجاح.")
             return conn
         except Exception as e:
-            logger.error(f"Error connecting to database: {e}")
+            logger.error(f"خطأ في الاتصال بقاعدة البيانات: {e}")
             attempts -= 1
             if attempts == 0:
-                logger.error("Max attempts reached, unable to connect to database.")
+                logger.error("تم الوصول إلى الحد الأقصى من المحاولات، غير قادر على الاتصال بقاعدة البيانات.")
                 return None
-            logger.info(f"Retrying... attempts left: {attempts}")
+            logger.info(f"إعادة المحاولة... المحاولات المتبقية: {attempts}")
             time.sleep(5)  # الانتظار قبل إعادة المحاولة
 
 # مسار رئيسي لفتح التطبيق
