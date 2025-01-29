@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 import logging
 import certifi
 from dotenv import load_dotenv
+import time
 
 # تحميل المتغيرات البيئية من ملف .env
 load_dotenv()
@@ -34,32 +35,41 @@ def make_celery(app):
 # إنشاء Celery
 celery = make_celery(app)
 
-# إعداد الاتصال بقاعدة البيانات PostgreSQL
-
+# إعداد الاتصال بقاعدة البيانات PostgreSQL مع إعادة الاتصال التلقائي
 def get_db_connection():
-    try:
-        database_url = os.getenv("DATABASE_URL")
-        if not database_url:
-            logger.error("DATABASE_URL غير موجود في المتغيرات البيئية.")
-            return None
+    conn = None
+    retries = 5  # عدد المحاولات لإعادة الاتصال
+    delay = 5  # التأخير بين المحاولات (بالثواني)
+    
+    for attempt in range(retries):
+        try:
+            database_url = os.getenv("DATABASE_URL")
+            if not database_url:
+                logger.error("DATABASE_URL غير موجود في المتغيرات البيئية.")
+                return None
 
-        result = urlparse(database_url)
-        db_port = os.getenv("DB_PORT", 5432)
-        
-        conn = psycopg2.connect(
-            database=result.path[1:],
-            user=result.username,
-            password=result.password,
-            host="postgres",  # استخدام اسم الخدمة الداخلية لـ PostgreSQL
-            port=db_port,
-            sslmode='require',
-            sslrootcert=certifi.where()
-        )
-        logger.info("Connected to PostgreSQL database successfully.")
-        return conn
-    except Exception as e:
-        logger.error(f"Error connecting to database: {e}")
-        return None
+            result = urlparse(database_url)
+            db_port = os.getenv("DB_PORT", 5432)
+            
+            conn = psycopg2.connect(
+                database=result.path[1:],
+                user=result.username,
+                password=result.password,
+                host="postgres",  # استخدام اسم الخدمة الداخلية لـ PostgreSQL
+                port=db_port,
+                sslmode='require',
+                sslrootcert=certifi.where()
+            )
+            logger.info("Connected to PostgreSQL database successfully.")
+            return conn
+        except Exception as e:
+            logger.error(f"Error connecting to database: {e}")
+            if attempt < retries - 1:
+                logger.info(f"Retrying connection... Attempt {attempt + 2} of {retries}")
+                time.sleep(delay)  # التأخير قبل المحاولة التالية
+            else:
+                logger.error("Max retries reached. Could not connect to the database.")
+                return None
 
 # اختبار الاتصال بقاعدة البيانات
 def test_db_connection():
