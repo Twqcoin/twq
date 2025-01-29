@@ -12,6 +12,17 @@ import time
 # تحميل المتغيرات البيئية من ملف .env
 load_dotenv()
 
+# استخدام المتغيرات في الكود
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND')
+DATABASE_URL = os.getenv('DATABASE_URL')
+DB_HOST = os.getenv('DB_HOST')
+DB_NAME = os.getenv('DB_NAME')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+DB_PORT = os.getenv('DB_PORT', 5432)
+DB_USER = os.getenv('DB_USER')
+FLASK_APP = os.getenv('FLASK_APP')
+
 # تهيئة Flask
 app = Flask(__name__)
 
@@ -19,9 +30,9 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# تهيئة Celery مع Redis كوسيط
-app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')
-app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND', 'redis://redis:6379/0')
+# تهيئة Celery مع Redis كوسيط باستخدام المتغيرات البيئية
+app.config['CELERY_BROKER_URL'] = CELERY_BROKER_URL
+app.config['CELERY_RESULT_BACKEND'] = CELERY_RESULT_BACKEND
 
 def make_celery(app):
     celery = Celery(
@@ -40,20 +51,18 @@ def get_db_connection():
     attempts = 5
     while attempts > 0:
         try:
-            database_url = os.getenv("DATABASE_URL")
-            if not database_url:
+            if not DATABASE_URL:
                 logger.error("DATABASE_URL غير موجود في المتغيرات البيئية.")
                 return None
 
-            result = urlparse(database_url)
-            db_port = os.getenv("DB_PORT", 5432)
+            result = urlparse(DATABASE_URL)
 
             conn = psycopg2.connect(
-                database=result.path[1:],
-                user=result.username,
-                password=result.password,
-                host="postgres",  # استخدام اسم الخدمة الداخلية لـ PostgreSQL
-                port=db_port,
+                database=DB_NAME,
+                user=DB_USER,
+                password=DB_PASSWORD,
+                host=DB_HOST,  # استخدام اسم الخدمة الداخلية لـ PostgreSQL
+                port=DB_PORT,
                 sslmode='require',
                 sslrootcert=certifi.where()
             )
