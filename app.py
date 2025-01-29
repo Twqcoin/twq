@@ -82,10 +82,10 @@ def get_db_connection():
             logger.info(f"Retrying... attempts left: {attempts}")
             time.sleep(5)  # الانتظار قبل إعادة المحاولة
 
-# مسار رئيسي للتحقق من أن التطبيق يعمل بشكل صحيح
+# مسار رئيسي لفتح التطبيق
 @app.route('/')
 def index():
-    return 'App is live at https://twq-xzy4.onrender.com'
+    return render_template('index.html')  # هنا يتم عرض صفحة index.html الخاصة بتطبيقك
 
 # إضافة مهمة Celery بسيطة
 @celery.task
