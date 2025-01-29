@@ -30,6 +30,11 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# تأكد من أن المتغيرات البيئية تم تحميلها بشكل صحيح
+logger.info(f"Celery Broker URL: {CELERY_BROKER_URL}")
+logger.info(f"Celery Result Backend: {CELERY_RESULT_BACKEND}")
+logger.info(f"Database URL: {DATABASE_URL}")
+
 # تهيئة Celery مع Redis كوسيط باستخدام المتغيرات البيئية
 app.config['CELERY_BROKER_URL'] = CELERY_BROKER_URL
 app.config['CELERY_RESULT_BACKEND'] = CELERY_RESULT_BACKEND
@@ -77,8 +82,20 @@ def get_db_connection():
             logger.info(f"Retrying... attempts left: {attempts}")
             time.sleep(5)  # الانتظار قبل إعادة المحاولة
 
-# باقي الكود كما هو
-# ...
+# مسار رئيسي للتحقق من أن التطبيق يعمل بشكل صحيح
+@app.route('/')
+def index():
+    return 'Hello, World!'
+
+# إضافة مهمة Celery بسيطة
+@celery.task
+def add_numbers(a, b):
+    return a + b
+
+@app.route('/add')
+def add():
+    result = add_numbers.apply_async((5, 7))  # حساب 5 + 7 باستخدام Celery
+    return jsonify(result=result.get(timeout=10))  # الحصول على النتيجة
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=10000)
