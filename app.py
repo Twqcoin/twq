@@ -1,27 +1,23 @@
-from flask import Flask, render_template, request, jsonify
-from celery import Celery
 import os
-import requests
 import psycopg2
 from urllib.parse import urlparse
-import logging
 import certifi
-from dotenv import load_dotenv
+import logging
 import time
+from flask import Flask, render_template, request, jsonify
+from celery import Celery
+from dotenv import load_dotenv
 
 # تحميل المتغيرات البيئية من ملف .env
 load_dotenv()
 
 # استخدام المتغيرات في الكود
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND')
 DATABASE_URL = os.getenv('DATABASE_URL')
 DB_HOST = os.getenv('DB_HOST')
 DB_NAME = os.getenv('DB_NAME')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
 DB_PORT = os.getenv('DB_PORT', 5432)
 DB_USER = os.getenv('DB_USER')
-FLASK_APP = os.getenv('FLASK_APP')
 
 # تهيئة Flask
 app = Flask(__name__)
@@ -30,26 +26,11 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# تأكد من أن المتغيرات البيئية تم تحميلها بشكل صحيح
-logger.info(f"Celery Broker URL: {CELERY_BROKER_URL}")
-logger.info(f"Celery Result Backend: {CELERY_RESULT_BACKEND}")
-logger.info(f"Database URL: {DATABASE_URL}")
-
-# تهيئة Celery مع Redis كوسيط باستخدام المتغيرات البيئية
-app.config['CELERY_BROKER_URL'] = CELERY_BROKER_URL
-app.config['CELERY_RESULT_BACKEND'] = CELERY_RESULT_BACKEND
-
-def make_celery(app):
-    celery = Celery(
-        app.import_name,
-        backend=app.config['CELERY_RESULT_BACKEND'],
-        broker=app.config['CELERY_BROKER_URL']
-    )
-    celery.conf.update(app.config)
-    return celery
-
-# إنشاء Celery
-celery = make_celery(app)
+# تهيئة Celery مع Redis كوسيط
+app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL')
+app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND')
+celery = Celery(app.name, backend=app.config['CELERY_RESULT_BACKEND'], broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
 
 # إعداد الاتصال بقاعدة البيانات PostgreSQL مع محاولة إعادة الاتصال
 def get_db_connection():
@@ -80,29 +61,41 @@ def get_db_connection():
                 logger.error("تم الوصول إلى الحد الأقصى من المحاولات، غير قادر على الاتصال بقاعدة البيانات.")
                 return None
             logger.info(f"إعادة المحاولة... المحاولات المتبقية: {attempts}")
-            time.sleep(5)  # الانتظار قبل إعادة المحاولة
+            time.sleep(5)
 
-# دالة لتحديث تقدم اللاعب في قاعدة البيانات
-def update_player_progress(player_name, progress):
-    conn = get_db_connection()
-    if conn:
-        try:
-            with conn.cursor() as cursor:
-                # تعديل الجدول والتحديث حسب الحاجة
-                cursor.execute("""
-                    UPDATE players SET progress = %s WHERE name = %s;
-                """, (progress, player_name))
-                conn.commit()
-                logger.info(f"تم تحديث التقدم للاعب {player_name} إلى {progress}%")
-        except Exception as e:
-            logger.error(f"حدث خطأ أثناء تحديث التقدم: {e}")
-        finally:
+# دالة لإنشاء الجدول
+def create_players_table():
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            return
+
+        cursor = conn.cursor()
+
+        # إنشاء جدول اللاعبين
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS players (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                progress INT CHECK (progress >= 0 AND progress <= 100) NOT NULL
+            );
+        """)
+        conn.commit()
+        logger.info("تم إنشاء الجدول بنجاح.")
+    except Exception as e:
+        logger.error(f"حدث خطأ أثناء إنشاء الجدول: {e}")
+    finally:
+        if conn:
+            cursor.close()
             conn.close()
+
+# تنفيذ الدالة لإنشاء الجدول عند بدء تشغيل التطبيق
+create_players_table()
 
 # مسار رئيسي لفتح التطبيق
 @app.route('/')
 def index():
-    return render_template('index.html')  # هنا يتم عرض صفحة index.html الخاصة بتطبيقك
+    return render_template('index.html')
 
 # إضافة مهمة Celery بسيطة
 @celery.task
@@ -113,25 +106,6 @@ def add_numbers(a, b):
 def add():
     result = add_numbers.apply_async((5, 7))  # حساب 5 + 7 باستخدام Celery
     return jsonify(result=result.get(timeout=10))  # الحصول على النتيجة
-
-# مسار لتحديث تقدم اللاعب
-@app.route('/update_progress', methods=['POST'])
-def update_progress():
-    try:
-        data = request.get_json()
-        player_name = data.get('name')
-        progress = data.get('progress')
-
-        if not player_name or progress is None:
-            return jsonify({'message': 'الاسم أو التقدم مفقود'}), 400
-
-        # هنا يمكنك تحديث التقدم في قاعدة البيانات
-        update_player_progress(player_name, progress)
-
-        return jsonify({'message': 'تم تحديث التقدم بنجاح!'}), 200
-    except Exception as e:
-        logger.error(f"حدث خطأ أثناء تحديث التقدم: {e}", exc_info=True)
-        return jsonify({'message': 'حدث خطأ أثناء تحديث التقدم'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=10000)
