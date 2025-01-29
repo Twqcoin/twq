@@ -18,10 +18,9 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# تهيئة Celery مع Redis كوسيط (بدلاً من PostgreSQL)
-# تأكد من استخدام اسم الخدمة الداخلية لـ Redis على Render
-app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')  # استبدل ببيانات الاتصال الخاصة بك
-app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND', 'redis://redis:6379/0')  # استبدل ببيانات الاتصال الخاصة بك
+# تهيئة Celery مع Redis كوسيط
+app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')
+app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND', 'redis://redis:6379/0')
 
 def make_celery(app):
     celery = Celery(
@@ -36,10 +35,8 @@ def make_celery(app):
 celery = make_celery(app)
 
 # إعداد الاتصال بقاعدة البيانات PostgreSQL
+
 def get_db_connection():
-    """
-    إنشاء اتصال بقاعدة البيانات باستخدام DATABASE_URL من المتغيرات البيئية.
-    """
     try:
         database_url = os.getenv("DATABASE_URL")
         if not database_url:
@@ -47,19 +44,16 @@ def get_db_connection():
             return None
 
         result = urlparse(database_url)
-
-        # جلب المنفذ من المتغير البيئي DB_PORT أو استخدام 5432 كمنفذ افتراضي
         db_port = os.getenv("DB_PORT", 5432)
-
-        # استخدام اسم الخدمة الداخلية لـ PostgreSQL بدلاً من 'localhost'
+        
         conn = psycopg2.connect(
-            database=result.path[1:],  # استخراج اسم قاعدة البيانات من URL
-            user=result.username,       # اسم المستخدم
-            password=result.password,   # كلمة المرور
-            host="postgres",            # اسم خدمة PostgreSQL الداخلية على Render
-            port=db_port,               # استخدام المنفذ من المتغير البيئي أو الافتراضي
-            sslmode='require',          # إذا كانت القاعدة تتطلب SSL
-            sslrootcert=certifi.where() # إضافة مسار شهادة SSL إذا كانت مطلوبة
+            database=result.path[1:],
+            user=result.username,
+            password=result.password,
+            host="postgres",  # استخدام اسم الخدمة الداخلية لـ PostgreSQL
+            port=db_port,
+            sslmode='require',
+            sslrootcert=certifi.where()
         )
         logger.info("Connected to PostgreSQL database successfully.")
         return conn
@@ -67,7 +61,7 @@ def get_db_connection():
         logger.error(f"Error connecting to database: {e}")
         return None
 
-# دالة لاختبار الاتصال بقاعدة البيانات
+# اختبار الاتصال بقاعدة البيانات
 def test_db_connection():
     conn = get_db_connection()
     if conn:
@@ -81,22 +75,12 @@ def test_db_connection():
     else:
         logger.error("Failed to connect to the database!")
 
-# مسار لاختبار الاتصال بقاعدة البيانات
-@app.route('/test_connection', methods=['GET'])
-def test_connection():
-    conn = get_db_connection()
-    if conn:
-        return jsonify({"message": "Connected to database successfully!"})
-    else:
-        return jsonify({"error": "Failed to connect to the database."}), 500
-
-# دالة لإنشاء الجداول إذا لم تكن موجودة
+# إنشاء الجداول إذا لم تكن موجودة
 def create_tables():
     conn = get_db_connection()
     if conn:
         try:
             with conn.cursor() as cursor:
-                # جدول اللاعبين
                 cursor.execute(""" 
                 CREATE TABLE IF NOT EXISTS players (
                     id SERIAL PRIMARY KEY,
@@ -106,15 +90,14 @@ def create_tables():
                 );
                 """)
 
-                # جدول المهمات
                 cursor.execute(""" 
                 CREATE TABLE IF NOT EXISTS tasks (
                     id SERIAL PRIMARY KEY,
-                    description TEXT NOT NULL,  -- وصف المهمة
-                    reward INT,                 -- مكافأة إتمام المهمة
-                    is_completed BOOLEAN DEFAULT FALSE,  -- حالة إتمام المهمة
-                    player_id INT REFERENCES players(id), -- مرجع للاعب
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- وقت إضافة المهمة
+                    description TEXT NOT NULL,
+                    reward INT,
+                    is_completed BOOLEAN DEFAULT FALSE,
+                    player_id INT REFERENCES players(id),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
                 """)
 
@@ -127,9 +110,6 @@ def create_tables():
 
 # تحديث تقدم اللاعب في قاعدة البيانات
 def update_player_progress(player_name, progress):
-    """
-    تحديث تقدم لاعب في قاعدة البيانات.
-    """
     conn = get_db_connection()
     if conn:
         try:
@@ -145,19 +125,13 @@ def update_player_progress(player_name, progress):
 # إرسال رسالة عبر Telegram
 @celery.task
 def send_telegram_message(message):
-    """
-    إرسال رسالة إلى Telegram بشكل غير متزامن باستخدام Celery.
-    """
     bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
     chat_id = os.getenv('TELEGRAM_CHAT_ID')
     if not bot_token or not chat_id:
         logger.error("Telegram bot token or chat ID is missing!")
         return
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": message
-    }
+    payload = {"chat_id": chat_id, "text": message}
     try:
         response = requests.post(url, json=payload)
         response.raise_for_status()
@@ -170,10 +144,10 @@ def send_telegram_message(message):
 def update_progress():
     player_name = request.json.get('name')
     progress = request.json.get('progress')
-
+    
     if not player_name or not progress:
         return jsonify({"error": "Missing player name or progress"}), 400
-
+    
     try:
         progress = int(progress)
         if progress < 0 or progress > 100:
@@ -181,26 +155,18 @@ def update_progress():
     except ValueError:
         return jsonify({"error": "Progress must be a number"}), 400
 
-    # تحديث تقدم اللاعب في قاعدة البيانات
     update_player_progress(player_name, progress)
-
-    # إرسال إشعار إلى Telegram بشكل غير متزامن
     send_telegram_message.delay(f"Player {player_name} progress updated to {progress}%")
-
     return jsonify({"message": "Progress updated successfully!"})
 
-# مسار الصفحة الرئيسية
+# الصفحة الرئيسية
 @app.route('/')
 def home():
     logger.info("Rendering the home page.")
-    return render_template('index.html')  # يعرض ملف HTML من مجلد templates
+    return render_template('index.html')
 
-# تشغيل التطبيق
 if __name__ == '__main__':
-    # اختبار الاتصال بقاعدة البيانات
     test_db_connection()
-
-    # إنشاء الجداول في قاعدة البيانات إذا لم تكن موجودة
     create_tables()
     logger.info("Starting the Flask application...")
     app.run(debug=True, host='0.0.0.0', port=10000)
