@@ -77,6 +77,11 @@ def add_player_to_db(player_name, player_image_url):
                 return
 
             with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM players WHERE name = %s", (player_name,))
+                if cursor.fetchone():
+                    logger.error(f"اللاعب {player_name} موجود بالفعل.")
+                    return
+
                 cursor.execute("INSERT INTO players (name, image_url, progress) VALUES (%s, %s, %s)", 
                                (player_name, player_image_url, 0))
                 conn.commit()
