@@ -85,7 +85,7 @@ def get_db_connection():
 # مسار رئيسي للتحقق من أن التطبيق يعمل بشكل صحيح
 @app.route('/')
 def index():
-    return 'Hello, World!'
+    return 'App is live at https://twq-xzy4.onrender.com'
 
 # إضافة مهمة Celery بسيطة
 @celery.task
