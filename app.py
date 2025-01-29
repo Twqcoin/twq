@@ -1,7 +1,6 @@
 import os
 import psycopg2
 from urllib.parse import urlparse
-import certifi
 import logging
 import time
 from flask import Flask, render_template, request, jsonify
@@ -43,14 +42,14 @@ def get_db_connection():
 
             result = urlparse(DATABASE_URL)
 
+            # تعديل الاتصال بقاعدة البيانات لتعطيل SSL
             conn = psycopg2.connect(
                 database=DB_NAME,
                 user=DB_USER,
                 password=DB_PASSWORD,
                 host=DB_HOST,  # استخدام اسم الخدمة الداخلية لـ PostgreSQL
                 port=DB_PORT,
-                sslmode='require',
-                sslrootcert=certifi.where()
+                sslmode='disable'  # تعطيل SSL
             )
             logger.info("تم الاتصال بقاعدة بيانات PostgreSQL بنجاح.")
             return conn
@@ -73,7 +72,7 @@ def create_players_table():
         cursor = conn.cursor()
 
         # إنشاء جدول اللاعبين
-        cursor.execute("""
+        cursor.execute(""" 
             CREATE TABLE IF NOT EXISTS players (
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(100) NOT NULL,
