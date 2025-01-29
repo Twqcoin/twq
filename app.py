@@ -5,6 +5,7 @@ import requests
 import psycopg2
 from urllib.parse import urlparse
 import logging
+import certifi
 from dotenv import load_dotenv
 
 # تحميل المتغيرات البيئية من ملف .env
@@ -41,6 +42,10 @@ def get_db_connection():
     """
     try:
         database_url = os.getenv("DATABASE_URL")
+        if not database_url:
+            logger.error("DATABASE_URL غير موجود في المتغيرات البيئية.")
+            return None
+
         result = urlparse(database_url)
 
         # جلب المنفذ من المتغير البيئي DB_PORT أو استخدام 5432 كمنفذ افتراضي
@@ -52,7 +57,9 @@ def get_db_connection():
             user=result.username,       # اسم المستخدم
             password=result.password,   # كلمة المرور
             host="postgres",            # اسم خدمة PostgreSQL الداخلية على Render
-            port=db_port                # استخدام المنفذ من المتغير البيئي أو الافتراضي
+            port=db_port,               # استخدام المنفذ من المتغير البيئي أو الافتراضي
+            sslmode='require',          # إذا كانت القاعدة تتطلب SSL
+            sslrootcert=certifi.where() # إضافة مسار شهادة SSL إذا كانت مطلوبة
         )
         logger.info("Connected to PostgreSQL database successfully.")
         return conn
@@ -90,7 +97,7 @@ def create_tables():
         try:
             with conn.cursor() as cursor:
                 # جدول اللاعبين
-                cursor.execute("""
+                cursor.execute(""" 
                 CREATE TABLE IF NOT EXISTS players (
                     id SERIAL PRIMARY KEY,
                     name VARCHAR(255) UNIQUE NOT NULL,
@@ -100,7 +107,7 @@ def create_tables():
                 """)
 
                 # جدول المهمات
-                cursor.execute("""
+                cursor.execute(""" 
                 CREATE TABLE IF NOT EXISTS tasks (
                     id SERIAL PRIMARY KEY,
                     description TEXT NOT NULL,  -- وصف المهمة
