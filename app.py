@@ -18,8 +18,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # تهيئة Celery مع Redis كوسيط (بدلاً من PostgreSQL)
-app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')  # استبدل ببيانات الاتصال الخاصة بك
-app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')  # استبدل ببيانات الاتصال الخاصة بك
+# تأكد من استخدام اسم الخدمة الداخلية لـ Redis على Render
+app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')  # استبدل ببيانات الاتصال الخاصة بك
+app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND', 'redis://redis:6379/0')  # استبدل ببيانات الاتصال الخاصة بك
 
 def make_celery(app):
     celery = Celery(
@@ -45,11 +46,12 @@ def get_db_connection():
         # جلب المنفذ من المتغير البيئي DB_PORT أو استخدام 5432 كمنفذ افتراضي
         db_port = os.getenv("DB_PORT", 5432)
 
+        # استخدام اسم الخدمة الداخلية لـ PostgreSQL بدلاً من 'localhost'
         conn = psycopg2.connect(
             database=result.path[1:],  # استخراج اسم قاعدة البيانات من URL
             user=result.username,       # اسم المستخدم
             password=result.password,   # كلمة المرور
-            host=result.hostname,       # اسم المضيف
+            host="postgres",            # اسم خدمة PostgreSQL الداخلية على Render
             port=db_port                # استخدام المنفذ من المتغير البيئي أو الافتراضي
         )
         logger.info("Connected to PostgreSQL database successfully.")
