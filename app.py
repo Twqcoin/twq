@@ -123,5 +123,33 @@ def test_db_connection():
     else:
         return "فشل الاتصال بقاعدة البيانات."
 
+# نقطة نهاية لحفظ بيانات اللاعب
+@app.route('/save-player', methods=['POST'])
+def save_player():
+    player_name = request.form['name']
+    player_progress = int(request.form['progress'])
+
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            logger.error("لم يتم الاتصال بقاعدة البيانات.")
+            return "فشل الاتصال بقاعدة البيانات."
+
+        cursor = conn.cursor()
+
+        # إضافة بيانات اللاعب
+        cursor.execute("INSERT INTO players (name, progress) VALUES (%s, %s)", (player_name, player_progress))
+        conn.commit()
+        logger.info(f"تم حفظ بيانات اللاعب: {player_name} - {player_progress}")
+
+        return jsonify(message="تم حفظ البيانات بنجاح")
+    except Exception as e:
+        logger.error(f"حدث خطأ أثناء حفظ بيانات اللاعب: {e}")
+        return jsonify(message="فشل في حفظ البيانات")
+    finally:
+        if conn:
+            cursor.close()
+            conn.close()
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=10000)
