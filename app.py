@@ -47,14 +47,17 @@ def get_db_connection():
 
             result = urlparse(DATABASE_URL)
 
-            # تعديل الاتصال بقاعدة البيانات لتعطيل SSL
+            # تعديل الاتصال بقاعدة البيانات لتمكين SSL
             conn = psycopg2.connect(
                 database=DB_NAME,
                 user=DB_USER,
                 password=DB_PASSWORD,
                 host=DB_HOST,  # استخدام اسم الخدمة الداخلية لـ PostgreSQL
                 port=DB_PORT,
-                sslmode='disable'  # تعطيل SSL
+                sslmode='require',  # تمكين SSL
+                sslrootcert='/path/to/ca-cert.pem',  # المسار إلى شهادة الجذر (إذا لزم الأمر)
+                sslcert='/path/to/client-cert.pem',  # المسار إلى شهادة العميل (إذا لزم الأمر)
+                sslkey='/path/to/client-key.pem'  # المسار إلى مفتاح العميل (إذا لزم الأمر)
             )
             logger.info("تم الاتصال بقاعدة بيانات PostgreSQL بنجاح.")
             return conn
