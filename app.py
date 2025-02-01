@@ -158,7 +158,7 @@ def set_webhook():
     إعداد Webhook للبوت لتمرير التحديثات إلى التطبيق.
     """
     token = os.getenv("TELEGRAM_BOT_TOKEN")
-    webhook_url = f"https://your-app-name.onrender.com/webhook"  # تأكد من استبدال رابط التطبيق الخاص بك
+    webhook_url = f"https://twq-xzy4.onrender.com/webhook"  # تأكد من استبدال رابط التطبيق الخاص بك
 
     if not token or not webhook_url:
         logger.error("لم يتم العثور على رمز البوت أو الرابط الخاص بالـ Webhook في المتغيرات البيئية.")
