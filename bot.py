@@ -178,22 +178,29 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # تشغيل البوت
 def main():
     """
-    تهيئة البوت وبدء التشغيل.
+    تهيئة البوت وبدء التشغيل باستخدام Webhook.
     """
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
         logger.error("لم يتم العثور على رمز البوت في المتغيرات البيئية.")
         return
 
-    application = ApplicationBuilder() \
-        .token(token) \
-        .build()
+    application = ApplicationBuilder().token(token).build()
+
+    # إعداد Webhook
+    webhook_url = os.getenv("WEBHOOK_URL")  # تأكد من إضافة الرابط هنا
+    application.bot.set_webhook(url=webhook_url)
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
 
     create_db()
-    application.run_polling(allowed_updates=["message", "callback_query"])
+    application.run_webhook(
+        listen="0.0.0.0",
+        port=int(os.getenv("PORT", 5000)),  # تأكد من أن المنفذ صحيح
+        url_path="webhook",  # تأكد من إعداد هذا بشكل صحيح في Webhook URL
+        webhook_url=f"{webhook_url}/webhook"
+    )
 
 # تشغيل Flask في الخلفية
 if __name__ == "__main__":
