@@ -7,6 +7,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
 from urllib.parse import urlparse
+from threading import Thread
 
 # تحميل المتغيرات البيئية
 load_dotenv()
@@ -197,10 +198,9 @@ def main():
 # تشغيل Flask في الخلفية
 if __name__ == "__main__":
     # تشغيل Flask في الخلفية
-    from threading import Thread
-
     def run_flask():
-        app.run(debug=True, use_reloader=False)
+        port = os.getenv("PORT", 5000)  # تحديد المنفذ باستخدام المتغير البيئي PORT
+        app.run(debug=True, host="0.0.0.0", port=int(port), use_reloader=False)
 
     flask_thread = Thread(target=run_flask)
     flask_thread.start()
