@@ -18,12 +18,17 @@ DB_PASSWORD = os.getenv('DB_PASSWORD')
 DB_PORT = os.getenv('DB_PORT', 5432)
 DB_USER = os.getenv('DB_USER')
 
+# طباعة المتغيرات البيئية (للتأكد من تحميلها بشكل صحيح)
+logger = logging.getLogger(__name__)
+logger.info(f"DATABASE_URL: {DATABASE_URL}")
+logger.info(f"DB_HOST: {DB_HOST}")
+logger.info(f"DB_USER: {DB_USER}")
+
 # تهيئة Flask
 app = Flask(__name__)
 
 # إعداد سجلات التتبع
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # تهيئة Celery مع Redis كوسيط
 app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL')
@@ -105,6 +110,15 @@ def add_numbers(a, b):
 def add():
     result = add_numbers.apply_async((5, 7))  # حساب 5 + 7 باستخدام Celery
     return jsonify(result=result.get(timeout=10))  # الحصول على النتيجة
+
+# نقطة نهاية لاختبار الاتصال بقاعدة البيانات
+@app.route('/test-db-connection')
+def test_db_connection():
+    conn = get_db_connection()
+    if conn:
+        return "تم الاتصال بقاعدة البيانات بنجاح!"
+    else:
+        return "فشل الاتصال بقاعدة البيانات."
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=10000)
