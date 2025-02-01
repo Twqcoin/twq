@@ -290,7 +290,7 @@ def main():
     create_db()
     application.run_webhook(
         listen="0.0.0.0",
-        port=int(os.getenv("PORT", 5000)),  # تأكد من أن المنفذ صحيح
+        port=int(os.getenv("PORT", 5432)),  # تأكد من أن المنفذ صحيح
         url_path="webhook",  # تأكد من إعداد هذا بشكل صحيح في Webhook URL
         webhook_url=f"{webhook_url}/webhook"
     )
