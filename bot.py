@@ -279,7 +279,7 @@ def main():
     application = ApplicationBuilder().token(token).build()
 
     # إعداد Webhook
-    webhook_url = os.getenv("WEBHOOK_URL")  # تأكد من إضافة الرابط هنا
+    webhook_url = os.getenv("https://twq-xzy4.onrender.com")  # تأكد من إضافة الرابط هنا
     application.bot.set_webhook(url=webhook_url)
 
     application.add_handler(CommandHandler("start", start))
