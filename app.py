@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 import logging
 import time
 from flask import Flask, render_template, request, jsonify
+import requests
 from celery import Celery
 from dotenv import load_dotenv
 
@@ -151,5 +152,73 @@ def save_player():
             cursor.close()
             conn.close()
 
+# إعداد Webhook للبوت
+def set_webhook():
+    """
+    إعداد Webhook للبوت لتمرير التحديثات إلى التطبيق.
+    """
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    webhook_url = f"https://your-app-name.onrender.com/webhook"  # تأكد من استبدال رابط التطبيق الخاص بك
+
+    if not token or not webhook_url:
+        logger.error("لم يتم العثور على رمز البوت أو الرابط الخاص بالـ Webhook في المتغيرات البيئية.")
+        return
+
+    url = f"https://api.telegram.org/bot{token}/setWebhook?url={webhook_url}"
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            logger.info("تم تسجيل الـ Webhook بنجاح!")
+        else:
+            logger.error(f"فشل تسجيل الـ Webhook: {response.text}")
+    except Exception as e:
+        logger.error(f"حدث خطأ أثناء تسجيل الـ Webhook: {e}", exc_info=True)
+
+# نقطة استقبال Webhook من Telegram
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    """
+    استقبال التحديثات من Telegram عند استدعاء Webhook.
+    """
+    try:
+        data = request.json
+        # هنا يمكن معالجة البيانات المرسلة من Telegram
+        logger.info(f"Received data: {data}")
+
+        # تأكد من أن التحديث يحتوي على رسالة
+        if 'message' in data:
+            message = data['message']
+            user_id = message['from']['id']
+            user_name = message['from']['first_name']
+            text = message['text']
+
+            # على سبيل المثال: الرد على الرسالة
+            response = {
+                "chat_id": user_id,
+                "text": f"مرحبًا {user_name}, لقد استلمت رسالتك: {text}"
+            }
+            send_message(response)
+
+        return jsonify({"status": "ok"}), 200
+    except Exception as e:
+        logger.error(f"Error while processing the webhook: {e}", exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+# إرسال رسالة إلى Telegram باستخدام API
+def send_message(response):
+    """
+    إرسال رسالة إلى Telegram باستخدام API.
+    """
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    
+    try:
+        r = requests.post(url, data=response)
+        if r.status_code != 200:
+            logger.error(f"Error while sending message: {r.text}")
+    except Exception as e:
+        logger.error(f"Error while sending message: {e}", exc_info=True)
+
 if __name__ == '__main__':
+    set_webhook()  # إعداد Webhook عند بدء تشغيل التطبيق
     app.run(debug=True, host='0.0.0.0', port=10000)
