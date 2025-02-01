@@ -290,7 +290,7 @@ def main():
     create_db()
     application.run_webhook(
         listen="0.0.0.0",
-        port=int(os.getenv("PORT", 5432)),  # تأكد من أن المنفذ صحيح
+        port=10000,  # تعديل المنفذ إلى 10000
         url_path="webhook",  # تأكد من إعداد هذا بشكل صحيح في Webhook URL
         webhook_url=f"{webhook_url}/webhook"
     )
@@ -299,8 +299,8 @@ def main():
 if __name__ == "__main__":
     # تشغيل Flask في الخلفية
     def run_flask():
-        port = os.getenv("PORT", 5432)  # تحديد المنفذ باستخدام المتغير البيئي PORT
-        app.run(debug=True, host="0.0.0.0", port=int(port), use_reloader=False)
+        port = 10000  # تحديد المنفذ إلى 10000
+        app.run(debug=True, host="0.0.0.0", port=port, use_reloader=False)
 
     flask_thread = Thread(target=run_flask)
     flask_thread.start()
