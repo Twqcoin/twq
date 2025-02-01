@@ -65,7 +65,9 @@ def create_db():
                                     id SERIAL PRIMARY KEY,
                                     name TEXT NOT NULL,
                                     image_url TEXT NOT NULL,
-                                    progress INTEGER DEFAULT 0)''')
+                                    progress INTEGER DEFAULT 0,
+                                    mining_progress INTEGER DEFAULT 0,
+                                    tasks_completed TEXT DEFAULT '')''')
                 conn.commit()
     except Exception as e:
         logger.error(f"حدث خطأ أثناء إنشاء الجدول: {e}", exc_info=True)
@@ -129,6 +131,67 @@ def get_player_progress(player_name):
         logger.error(f"حدث خطأ أثناء استرجاع التقدم: {e}", exc_info=True)
         return None
 
+# تحديث تقدم التعدين
+def update_mining_progress(player_name, mining_progress):
+    """
+    تحديث تقدم التعدين للاعب.
+    """
+    try:
+        with get_db_connection() as conn:
+            if conn is None:
+                logger.error("لا يمكن تحديث التقدم. لم يتم الاتصال بقاعدة البيانات.")
+                return
+
+            with conn.cursor() as cursor:
+                cursor.execute("UPDATE players SET mining_progress = %s WHERE name = %s", (mining_progress, player_name))
+                conn.commit()
+    except Exception as e:
+        logger.error(f"حدث خطأ أثناء تحديث تقدم التعدين: {e}", exc_info=True)
+
+# تحديث المهام المكتملة
+def update_tasks_completed(player_name, task):
+    """
+    تحديث المهام المكتملة للاعب.
+    """
+    try:
+        with get_db_connection() as conn:
+            if conn is None:
+                logger.error("لا يمكن تحديث المهام المكتملة. لم يتم الاتصال بقاعدة البيانات.")
+                return
+
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT tasks_completed FROM players WHERE name = %s", (player_name,))
+                tasks = cursor.fetchone()
+                if tasks:
+                    tasks_completed = tasks[0]
+                    if task not in tasks_completed:
+                        tasks_completed += f", {task}"
+                    cursor.execute("UPDATE players SET tasks_completed = %s WHERE name = %s", (tasks_completed, player_name))
+                    conn.commit()
+                else:
+                    logger.error(f"لا توجد بيانات للاعب {player_name}.")
+    except Exception as e:
+        logger.error(f"حدث خطأ أثناء تحديث المهام المكتملة: {e}", exc_info=True)
+
+# استرجاع المهام المكتملة
+def get_player_tasks(player_name):
+    """
+    استرجاع المهام المكتملة للاعب.
+    """
+    try:
+        with get_db_connection() as conn:
+            if conn is None:
+                logger.error("لا يمكن استرجاع المهام. لم يتم الاتصال بقاعدة البيانات.")
+                return None
+
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT tasks_completed FROM players WHERE name = %s", (player_name,))
+                tasks = cursor.fetchone()
+                return tasks[0] if tasks else None
+    except Exception as e:
+        logger.error(f"حدث خطأ أثناء استرجاع المهام: {e}", exc_info=True)
+        return None
+
 # تعريف الأمر /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -161,6 +224,33 @@ def receive_player_data():
     else:
         return jsonify({"status": "error", "message": "البيانات غير مكتملة!"}), 400
 
+# تعريف أمر /progress
+async def progress(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    عرض تقدم اللاعب في اللعبة.
+    """
+    player_name = update.message.text.split(' ')[1]
+    progress = get_player_progress(player_name)
+    mining_progress = get_player_mining_progress(player_name)
+
+    if progress is None:
+        await update.message.reply_text(f"لا يوجد تقدم للاعب {player_name}.")
+    else:
+        await update.message.reply_text(f"تقدم اللاعب {player_name}: {progress}% في اللعبة، {mining_progress}% في التعدين.")
+
+# تعريف أمر /tasks
+async def tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    عرض المهام المكتملة للاعب.
+    """
+    player_name = update.message.text.split(' ')[1]
+    tasks_completed = get_player_tasks(player_name)
+
+    if tasks_completed:
+        await update.message.reply_text(f"المهام المكتملة للاعب {player_name}: {tasks_completed}.")
+    else:
+        await update.message.reply_text(f"لا توجد مهام مكتملة للاعب {player_name}.")
+
 # تعريف أمر /help
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -171,6 +261,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     /start - بدء استخدام البوت
     /add_player <الاسم> <رابط الصورة> - إضافة لاعب جديد
     /progress <الاسم> - عرض تقدم لاعب
+    /tasks <الاسم> - عرض المهام المكتملة للاعب
     /help - عرض هذه الرسالة
     """
     await update.message.reply_text(help_text)
@@ -193,6 +284,8 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("progress", progress))
+    application.add_handler(CommandHandler("tasks", tasks))
 
     create_db()
     application.run_webhook(
