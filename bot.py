@@ -299,7 +299,7 @@ def main():
 if __name__ == "__main__":
     # تشغيل Flask في الخلفية
     def run_flask():
-        port = os.getenv("PORT", 5000)  # تحديد المنفذ باستخدام المتغير البيئي PORT
+        port = os.getenv("PORT", 5432)  # تحديد المنفذ باستخدام المتغير البيئي PORT
         app.run(debug=True, host="0.0.0.0", port=int(port), use_reloader=False)
 
     flask_thread = Thread(target=run_flask)
