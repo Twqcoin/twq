@@ -7,7 +7,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
 from urllib.parse import urlparse
-from threading import Thread
+import asyncio
 
 # تحميل المتغيرات البيئية
 load_dotenv()
@@ -95,103 +95,6 @@ def add_player_to_db(player_name, player_image_url):
     except Exception as e:
         logger.error(f"حدث خطأ أثناء إضافة اللاعب: {e}", exc_info=True)
 
-# تحديث تقدم لاعب
-def update_player_progress(player_name, progress):
-    """
-    تحديث تقدم لاعب في قاعدة البيانات.
-    """
-    try:
-        with get_db_connection() as conn:
-            if conn is None:
-                logger.error("لا يمكن تحديث التقدم. لم يتم الاتصال بقاعدة البيانات.")
-                return
-
-            with conn.cursor() as cursor:
-                cursor.execute("UPDATE players SET progress = %s WHERE name = %s", (progress, player_name))
-                conn.commit()
-    except Exception as e:
-        logger.error(f"حدث خطأ أثناء تحديث التقدم: {e}", exc_info=True)
-
-# استرجاع تقدم لاعب
-def get_player_progress(player_name):
-    """
-    استرجاع تقدم لاعب من قاعدة البيانات.
-    """
-    try:
-        with get_db_connection() as conn:
-            if conn is None:
-                logger.error("لا يمكن استرجاع التقدم. لم يتم الاتصال بقاعدة البيانات.")
-                return None
-
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT progress FROM players WHERE name = %s", (player_name,))
-                progress = cursor.fetchone()
-                return progress[0] if progress else None
-    except Exception as e:
-        logger.error(f"حدث خطأ أثناء استرجاع التقدم: {e}", exc_info=True)
-        return None
-
-# تحديث تقدم التعدين
-def update_mining_progress(player_name, mining_progress):
-    """
-    تحديث تقدم التعدين للاعب.
-    """
-    try:
-        with get_db_connection() as conn:
-            if conn is None:
-                logger.error("لا يمكن تحديث التقدم. لم يتم الاتصال بقاعدة البيانات.")
-                return
-
-            with conn.cursor() as cursor:
-                cursor.execute("UPDATE players SET mining_progress = %s WHERE name = %s", (mining_progress, player_name))
-                conn.commit()
-    except Exception as e:
-        logger.error(f"حدث خطأ أثناء تحديث تقدم التعدين: {e}", exc_info=True)
-
-# تحديث المهام المكتملة
-def update_tasks_completed(player_name, task):
-    """
-    تحديث المهام المكتملة للاعب.
-    """
-    try:
-        with get_db_connection() as conn:
-            if conn is None:
-                logger.error("لا يمكن تحديث المهام المكتملة. لم يتم الاتصال بقاعدة البيانات.")
-                return
-
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT tasks_completed FROM players WHERE name = %s", (player_name,))
-                tasks = cursor.fetchone()
-                if tasks:
-                    tasks_completed = tasks[0]
-                    if task not in tasks_completed:
-                        tasks_completed += f", {task}"
-                    cursor.execute("UPDATE players SET tasks_completed = %s WHERE name = %s", (tasks_completed, player_name))
-                    conn.commit()
-                else:
-                    logger.error(f"لا توجد بيانات للاعب {player_name}.")
-    except Exception as e:
-        logger.error(f"حدث خطأ أثناء تحديث المهام المكتملة: {e}", exc_info=True)
-
-# استرجاع المهام المكتملة
-def get_player_tasks(player_name):
-    """
-    استرجاع المهام المكتملة للاعب.
-    """
-    try:
-        with get_db_connection() as conn:
-            if conn is None:
-                logger.error("لا يمكن استرجاع المهام. لم يتم الاتصال بقاعدة البيانات.")
-                return None
-
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT tasks_completed FROM players WHERE name = %s", (player_name,))
-                tasks = cursor.fetchone()
-                return tasks[0] if tasks else None
-    except Exception as e:
-        logger.error(f"حدث خطأ أثناء استرجاع المهام: {e}", exc_info=True)
-        return None
-
 # تعريف الأمر /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -224,52 +127,10 @@ def receive_player_data():
     else:
         return jsonify({"status": "error", "message": "البيانات غير مكتملة!"}), 400
 
-# تعريف أمر /progress
-async def progress(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    عرض تقدم اللاعب في اللعبة.
-    """
-    player_name = update.message.text.split(' ')[1]
-    progress = get_player_progress(player_name)
-    mining_progress = get_player_mining_progress(player_name)
-
-    if progress is None:
-        await update.message.reply_text(f"لا يوجد تقدم للاعب {player_name}.")
-    else:
-        await update.message.reply_text(f"تقدم اللاعب {player_name}: {progress}% في اللعبة، {mining_progress}% في التعدين.")
-
-# تعريف أمر /tasks
-async def tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    عرض المهام المكتملة للاعب.
-    """
-    player_name = update.message.text.split(' ')[1]
-    tasks_completed = get_player_tasks(player_name)
-
-    if tasks_completed:
-        await update.message.reply_text(f"المهام المكتملة للاعب {player_name}: {tasks_completed}.")
-    else:
-        await update.message.reply_text(f"لا توجد مهام مكتملة للاعب {player_name}.")
-
-# تعريف أمر /help
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    عرض قائمة بالأوامر المتاحة.
-    """
-    help_text = """
-    الأوامر المتاحة:
-    /start - بدء استخدام البوت
-    /add_player <الاسم> <رابط الصورة> - إضافة لاعب جديد
-    /progress <الاسم> - عرض تقدم لاعب
-    /tasks <الاسم> - عرض المهام المكتملة للاعب
-    /help - عرض هذه الرسالة
-    """
-    await update.message.reply_text(help_text)
-
 # تشغيل البوت
-def main():
+async def run_bot():
     """
-    تهيئة البوت وبدء التشغيل باستخدام Webhook.
+    تهيئة البوت وتشغيله باستخدام Webhook.
     """
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
@@ -283,27 +144,29 @@ def main():
     application.bot.set_webhook(url=webhook_url)
 
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("progress", progress))
-    application.add_handler(CommandHandler("tasks", tasks))
 
     create_db()
-    application.run_webhook(
+    await application.run_webhook(
         listen="0.0.0.0",
         port=10000,  # تعديل المنفذ إلى 10000
         url_path="webhook",  # تأكد من إعداد هذا بشكل صحيح في Webhook URL
         webhook_url=f"{webhook_url}/webhook"
     )
 
-# تشغيل Flask في الخلفية
+# تشغيل تطبيق Flask باستخدام gunicorn
 if __name__ == "__main__":
-    # تشغيل Flask في الخلفية
-    def run_flask():
-        port = 10000  # تحديد المنفذ إلى 10000
-        app.run(debug=True, host="0.0.0.0", port=port, use_reloader=False)
+    from gunicorn.app.base import BaseApplication
+    class FlaskApp(BaseApplication):
+        def __init__(self, app):
+            self.application = app
+            super().__init__()
 
-    flask_thread = Thread(target=run_flask)
-    flask_thread.start()
+        def load(self):
+            return self.application
+
+    # تشغيل Flask باستخدام gunicorn
+    flask_app = FlaskApp(app)
+    flask_app.run()
 
     # تشغيل البوت
-    main()
+    asyncio.run(run_bot())
