@@ -128,7 +128,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton(
             text="Play Game",
-            web_app={"url": "https://twq.onrender.com"}  # رابط التطبيق الذي تريد فتحه داخل Telegram
+            web_app={"url": "https://twq-xzy4.onrender.com"}  # رابط التطبيق الذي تريد فتحه داخل Telegram
         )]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
