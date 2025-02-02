@@ -32,7 +32,7 @@ app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND')
 celery = Celery(app.name, backend=app.config['CELERY_RESULT_BACKEND'], broker=app.config['CELERY_BROKER_URL'])
 celery.conf.update(app.config)
 
-# إعداد الاتصال بقاعدة البيانات PostgreSQL مع محاولة إعادة الاتصال
+# إعداد الاتصال بقاعدة البيانات PostgreSQL بدون شهادات SSL
 def get_db_connection():
     attempts = 5
     while attempts > 0:
@@ -43,17 +43,13 @@ def get_db_connection():
 
             result = urlparse(DATABASE_URL)
 
-            # تعديل الاتصال بقاعدة البيانات لتمكين SSL
+            # تعديل الاتصال بقاعدة البيانات بدون تمكين SSL
             conn = psycopg2.connect(
                 database=DB_NAME,
                 user=DB_USER,
                 password=DB_PASSWORD,
                 host=DB_HOST,  # استخدام اسم الخدمة الداخلية لـ PostgreSQL
-                port=DB_PORT,
-                sslmode='require',  # تمكين SSL
-                sslrootcert='/path/to/ca-cert.pem',  # المسار إلى شهادة الجذر (إذا لزم الأمر)
-                sslcert='/path/to/client-cert.pem',  # المسار إلى شهادة العميل (إذا لزم الأمر)
-                sslkey='/path/to/client-key.pem'  # المسار إلى مفتاح العميل (إذا لزم الأمر)
+                port=DB_PORT
             )
             logger.info("تم الاتصال بقاعدة بيانات PostgreSQL بنجاح.")
             return conn
