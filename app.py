@@ -122,26 +122,42 @@ def test_db_connection():
 # نقطة نهاية لحفظ بيانات اللاعب
 @app.route('/save-player', methods=['POST'])
 def save_player():
-    player_name = request.form['name']
-    player_progress = int(request.form['progress'])
+    player_name = request.form.get('name')
+    player_progress = request.form.get('progress')
+
+    if not player_name or not player_progress:
+        return jsonify(message="اسم اللاعب أو التقدم مفقود"), 400
+
+    try:
+        player_progress = int(player_progress)
+        if not (0 <= player_progress <= 100):
+            return jsonify(message="التقدم يجب أن يكون بين 0 و 100"), 400
+    except ValueError:
+        return jsonify(message="التقدم يجب أن يكون قيمة عددية"), 400
 
     try:
         conn = get_db_connection()
         if conn is None:
             logger.error("لم يتم الاتصال بقاعدة البيانات.")
-            return "فشل الاتصال بقاعدة البيانات."
+            return jsonify(message="فشل الاتصال بقاعدة البيانات."), 500
 
         cursor = conn.cursor()
 
-        # إضافة بيانات اللاعب
-        cursor.execute("INSERT INTO players (name, progress) VALUES (%s, %s)", (player_name, player_progress))
+        # إضافة أو تحديث بيانات اللاعب
+        cursor.execute("""
+            INSERT INTO players (name, progress) 
+            VALUES (%s, %s)
+            ON CONFLICT (name) 
+            DO UPDATE SET progress = EXCLUDED.progress;
+        """, (player_name, player_progress))
+        
         conn.commit()
         logger.info(f"تم حفظ بيانات اللاعب: {player_name} - {player_progress}")
 
         return jsonify(message="تم حفظ البيانات بنجاح")
     except Exception as e:
         logger.error(f"حدث خطأ أثناء حفظ بيانات اللاعب: {e}")
-        return jsonify(message="فشل في حفظ البيانات")
+        return jsonify(message="فشل في حفظ البيانات"), 500
     finally:
         if conn:
             cursor.close()
