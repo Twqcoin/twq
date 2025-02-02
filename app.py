@@ -19,17 +19,12 @@ DB_PASSWORD = os.getenv('DB_PASSWORD')
 DB_PORT = os.getenv('DB_PORT', 5432)
 DB_USER = os.getenv('DB_USER')
 
-# طباعة المتغيرات البيئية (للتأكد من تحميلها بشكل صحيح)
-logger = logging.getLogger(__name__)
-logger.info(f"DATABASE_URL: {DATABASE_URL}")
-logger.info(f"DB_HOST: {DB_HOST}")
-logger.info(f"DB_USER: {DB_USER}")
-
 # تهيئة Flask
 app = Flask(__name__)
 
 # إعداد سجلات التتبع
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # تهيئة Celery مع Redis كوسيط
 app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL')
