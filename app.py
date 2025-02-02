@@ -94,6 +94,10 @@ create_players_table()
 # مسار رئيسي لفتح التطبيق
 @app.route('/')
 def index():
+    player_name = request.args.get('name', '')  # إذا كان هناك اسم لاعب في العنوان
+    if player_name:
+        player_data = get_player(player_name)  # استرجاع بيانات اللاعب
+        return render_template('index.html', player_data=player_data)
     return render_template('index.html')
 
 # إضافة مهمة Celery بسيطة
@@ -138,6 +142,35 @@ def save_player():
     except Exception as e:
         logger.error(f"حدث خطأ أثناء حفظ بيانات اللاعب: {e}")
         return jsonify(message="فشل في حفظ البيانات")
+    finally:
+        if conn:
+            cursor.close()
+            conn.close()
+
+# نقطة لاسترجاع بيانات اللاعب
+@app.route('/get-player/<player_name>')
+def get_player(player_name):
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            return "فشل الاتصال بقاعدة البيانات."
+
+        cursor = conn.cursor()
+
+        # استرجاع بيانات اللاعب
+        cursor.execute("SELECT * FROM players WHERE name = %s", (player_name,))
+        player_data = cursor.fetchone()
+
+        if player_data:
+            player_name = player_data[1]  # الاسم
+            player_progress = player_data[2]  # النقاط
+            return jsonify(name=player_name, progress=player_progress)
+        else:
+            return jsonify(message="لا يوجد لاعب بهذا الاسم")
+
+    except Exception as e:
+        logger.error(f"حدث خطأ أثناء استرجاع بيانات اللاعب: {e}")
+        return jsonify(message="فشل في استرجاع البيانات")
     finally:
         if conn:
             cursor.close()
