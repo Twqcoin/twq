@@ -12,6 +12,8 @@
         display: none; /* إخفاء زر الشاشة الكاملة */
       }
     </style>
+    <!-- إضافة سكربت تليجرام -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
@@ -35,6 +37,7 @@
     </noscript>
 
     <script>
+      // تهيئة تطبيق تليجرام
       if (window.Telegram && window.Telegram.WebApp) {
         Telegram.WebApp.ready();
         Telegram.WebApp.expand();
