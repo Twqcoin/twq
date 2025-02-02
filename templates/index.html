@@ -80,6 +80,7 @@
         font-size: 1.2em;
       }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tonclient/core"></script>
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
@@ -230,6 +231,31 @@
           document.getElementById('responseMessage').textContent = "حدث خطأ: " + error;
         });
       });
+
+      // وظيفة ربط المحفظة
+      async function connectTonWallet() {
+        const tonClient = new TonClient({
+          network: {
+            serverAddress: "https://testnet.toncenter.com/api/v2/jsonRPC"
+          }
+        });
+
+        try {
+          const result = await tonClient.wallets.getAccount();
+          console.log("محفظة متصلة:", result);
+
+          const walletAddress = result.address;
+          alert('محفظتك: ' + walletAddress);
+        } catch (error) {
+          console.error("فشل الاتصال بالمحفظة:", error);
+        }
+      }
+
+      // إضافة زر للاتصال بالمحفظة
+      const walletButton = document.createElement('button');
+      walletButton.textContent = 'اتصال بالمحفظة';
+      walletButton.onclick = connectTonWallet;
+      document.body.appendChild(walletButton);
 
     </script>
 
