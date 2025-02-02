@@ -11,7 +11,9 @@ from urllib.parse import urlparse
 load_dotenv()
 
 # إعداد تسجيل الأخطاء
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
 # إعداد اتصال بقاعدة بيانات PostgreSQL
@@ -31,7 +33,7 @@ def get_db_connection():
             user=result.username,
             password=result.password,
             host=result.hostname,
-            port=result.port,  # إذا كان المنفذ غير موجود في الرابط، سيتم استخدام المنفذ الافتراضي 5432
+            port=result.port or 5432,  # إذا كان المنفذ غير موجود في الرابط، سيتم استخدام المنفذ الافتراضي 5432
             sslmode='require',  # تأكد من أن SSL مفعل
             sslrootcert=certifi.where()  # استخدام شهادات SSL موثوقة
         )
