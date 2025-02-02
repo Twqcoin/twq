@@ -12,10 +12,6 @@
         display: none; /* إخفاء زر الشاشة الكاملة */
       }
     </style>
-    <!-- إضافة سكربت تليجرام -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- إضافة سكربت Particle Network -->
-    <script src="https://cdn.particle.network/auth-core-modal/latest/auth-core-modal.min.js"></script>
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
@@ -34,12 +30,25 @@
       </div>
     </div>
 
+    <!-- نموذج إدخال تقدم اللاعب -->
+    <div id="progress-form">
+      <h3>تحديث تقدم اللاعب</h3>
+      <form id="updateProgressForm">
+        <label for="playerName">اسم اللاعب:</label>
+        <input type="text" id="playerName" required>
+        <br>
+        <label for="progress">التقدم (%):</label>
+        <input type="number" id="progress" min="0" max="100" required>
+        <br>
+        <button type="submit">تحديث التقدم</button>
+      </form>
+      <p id="responseMessage"></p>
+    </div>
+
     <noscript>
       <p>يجب تفعيل JavaScript لتشغيل هذا التطبيق.</p>
     </noscript>
-
     <script>
-      // تهيئة تطبيق تليجرام
       if (window.Telegram && window.Telegram.WebApp) {
         Telegram.WebApp.ready();
         Telegram.WebApp.expand();
@@ -113,15 +122,32 @@
       };
       document.body.appendChild(script);
 
-      // تهيئة Particle Auth
-      const particleAuth = new ParticleAuth({
-        appId: 'YOUR_APP_ID',
-        clientKey: 'YOUR_CLIENT_KEY',
-        projectId: 'YOUR_PROJECT_ID',
-      });
+      // التعامل مع نموذج تحديث التقدم
+      document.getElementById('updateProgressForm').addEventListener('submit', function(e) {
+        e.preventDefault();
 
-      // تفعيل Particle Auth
-      particleAuth.init();
+        var playerName = document.getElementById('playerName').value;
+        var progress = document.getElementById('progress').value;
+
+        // إرسال البيانات إلى Flask عبر AJAX
+        fetch('/update_progress', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: playerName,
+            progress: progress
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('responseMessage').textContent = data.message;
+        })
+        .catch(error => {
+          document.getElementById('responseMessage').textContent = "حدث خطأ: " + error;
+        });
+      });
     </script>
   </body>
 </html>
