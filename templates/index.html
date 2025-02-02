@@ -11,24 +11,6 @@
       #unity-fullscreen-button {
         display: none; /* إخفاء زر الشاشة الكاملة */
       }
-      #progress-form {
-        margin-top: 20px;
-        padding: 20px;
-        background-color: #f4f4f4;
-        border-radius: 5px;
-        width: 300px;
-        margin: 0 auto;
-      }
-      #progress-form input, #progress-form button {
-        width: 100%;
-        padding: 10px;
-        margin-bottom: 10px;
-        border-radius: 5px;
-      }
-      #responseMessage {
-        margin-top: 10px;
-        font-weight: bold;
-      }
     </style>
   </head>
   <body>
@@ -46,21 +28,6 @@
         <div id="unity-fullscreen-button"></div>
         <div id="unity-build-title">twq-master</div>
       </div>
-    </div>
-
-    <!-- نموذج إدخال تقدم اللاعب -->
-    <div id="progress-form">
-      <h3>تحديث تقدم اللاعب</h3>
-      <form id="updateProgressForm">
-        <label for="playerName">اسم اللاعب:</label>
-        <input type="text" id="playerName" required>
-        <br>
-        <label for="progress">التقدم (%):</label>
-        <input type="number" id="progress" min="0" max="100" required>
-        <br>
-        <button type="submit">تحديث التقدم</button>
-      </form>
-      <p id="responseMessage"></p>
     </div>
 
     <noscript>
@@ -140,33 +107,6 @@
         });
       };
       document.body.appendChild(script);
-
-      // التعامل مع نموذج تحديث التقدم
-      document.getElementById('updateProgressForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        var playerName = document.getElementById('playerName').value;
-        var progress = document.getElementById('progress').value;
-
-        // إرسال البيانات إلى Flask عبر AJAX
-        fetch('/update_progress', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            name: playerName,
-            progress: progress
-          })
-        })
-        .then(response => response.json())
-        .then(data => {
-          document.getElementById('responseMessage').textContent = data.message;
-        })
-        .catch(error => {
-          document.getElementById('responseMessage').textContent = "حدث خطأ: " + error;
-        });
-      });
     </script>
   </body>
 </html>
