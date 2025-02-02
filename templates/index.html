@@ -57,6 +57,28 @@
         margin-top: 20px;
         color: #d9534f;
       }
+
+      .player-info {
+        display: flex;
+        align-items: center;
+        margin-top: 20px;
+        border: 1px solid #ccc;
+        padding: 10px;
+        border-radius: 8px;
+        background-color: #f9f9f9;
+      }
+
+      .player-info img {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        margin-right: 10px;
+      }
+
+      .player-info p {
+        margin: 0;
+        font-size: 1.2em;
+      }
     </style>
   </head>
   <body>
@@ -86,9 +108,19 @@
         <label for="progress">التقدم (%):</label>
         <input type="number" id="progress" min="0" max="100" required>
         <br>
+        <label for="playerImage">رابط صورة اللاعب:</label>
+        <input type="text" id="playerImage" required>
+        <br>
         <button type="submit">تحديث التقدم</button>
       </form>
       <p id="responseMessage"></p>
+
+      <!-- عرض بيانات اللاعب بعد التحديث -->
+      <div id="playerDisplay" class="player-info" style="display: none;">
+        <img id="playerImageDisplay" src="" alt="Player Image">
+        <p id="playerNameDisplay"></p>
+        <p id="playerProgressDisplay"></p>
+      </div>
     </div>
 
     <noscript>
@@ -170,6 +202,7 @@
 
         var playerName = document.getElementById('playerName').value;
         var progress = document.getElementById('progress').value;
+        var playerImage = document.getElementById('playerImage').value;
 
         // إرسال البيانات إلى Flask عبر AJAX
         fetch('/update_progress', {
@@ -179,12 +212,19 @@
           },
           body: JSON.stringify({
             name: playerName,
-            progress: progress
+            progress: progress,
+            image: playerImage
           })
         })
         .then(response => response.json())
         .then(data => {
           document.getElementById('responseMessage').textContent = data.message;
+
+          // عرض صورة واسم اللاعب في الصفحة
+          document.getElementById('playerNameDisplay').textContent = playerName;
+          document.getElementById('playerProgressDisplay').textContent = "التقدم: " + progress + "%";
+          document.getElementById('playerImageDisplay').src = playerImage;
+          document.getElementById('playerDisplay').style.display = 'flex'; // إظهار بيانات اللاعب
         })
         .catch(error => {
           document.getElementById('responseMessage').textContent = "حدث خطأ: " + error;
