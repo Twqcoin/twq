@@ -12,6 +12,10 @@
         display: none; /* إخفاء زر الشاشة الكاملة */
       }
     </style>
+    <!-- إضافة سكربت تليجرام -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- إضافة سكربت Particle Auth -->
+    <script src="https://cdn.particle.network/auth-core-modal/latest/auth-core-modal.min.js"></script>
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
@@ -48,11 +52,23 @@
     <noscript>
       <p>يجب تفعيل JavaScript لتشغيل هذا التطبيق.</p>
     </noscript>
+
     <script>
+      // تهيئة تطبيق تليجرام
       if (window.Telegram && window.Telegram.WebApp) {
         Telegram.WebApp.ready();
         Telegram.WebApp.expand();
       }
+
+      // تهيئة Particle Auth
+      const particleAuth = new ParticleAuth({
+        appId: 'YOUR_APP_ID',
+        clientKey: 'YOUR_CLIENT_KEY',
+        projectId: 'YOUR_PROJECT_ID',
+      });
+
+      // تفعيل Particle Auth
+      particleAuth.init();
 
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
