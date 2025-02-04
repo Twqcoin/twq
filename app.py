@@ -3,9 +3,7 @@ import psycopg2
 from urllib.parse import urlparse
 import logging
 import time
-from flask import Flask, render_template, request, jsonify
-import requests
-from celery import Celery
+from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 
 # تحميل المتغيرات البيئية من ملف .env
@@ -26,12 +24,6 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# تهيئة Celery مع Redis كوسيط
-app.config['CELERY_BROKER_URL'] = os.getenv('CELERY_BROKER_URL')
-app.config['CELERY_RESULT_BACKEND'] = os.getenv('CELERY_RESULT_BACKEND')
-celery = Celery(app.name, backend=app.config['CELERY_RESULT_BACKEND'], broker=app.config['CELERY_BROKER_URL'])
-celery.conf.update(app.config)
-
 # إعداد الاتصال بقاعدة البيانات PostgreSQL بدون شهادات SSL
 def get_db_connection():
     attempts = 5
@@ -43,7 +35,6 @@ def get_db_connection():
 
             result = urlparse(DATABASE_URL)
 
-            # تعديل الاتصال بقاعدة البيانات بدون تمكين SSL
             conn = psycopg2.connect(
                 database=DB_NAME,
                 user=DB_USER,
@@ -63,7 +54,7 @@ def get_db_connection():
             time.sleep(5)
 
 # دالة لإنشاء الجدول
-def create_players_table():
+def create_wallets_table():
     try:
         conn = get_db_connection()
         if conn is None:
@@ -71,12 +62,11 @@ def create_players_table():
 
         cursor = conn.cursor()
 
-        # إنشاء جدول اللاعبين
+        # إنشاء جدول المحفظات
         cursor.execute(""" 
-            CREATE TABLE IF NOT EXISTS players (
+            CREATE TABLE IF NOT EXISTS wallets (
                 id SERIAL PRIMARY KEY,
-                name VARCHAR(100) NOT NULL,
-                progress INT CHECK (progress >= 0 AND progress <= 100) NOT NULL
+                address VARCHAR(255) UNIQUE NOT NULL
             );
         """)
         conn.commit()
@@ -89,176 +79,40 @@ def create_players_table():
             conn.close()
 
 # تنفيذ الدالة لإنشاء الجدول عند بدء تشغيل التطبيق
-create_players_table()
+create_wallets_table()
 
-# مسار رئيسي لفتح التطبيق
-@app.route('/')
-def index():
-    player_name = request.args.get('name', '')  # إذا كان هناك اسم لاعب في العنوان
-    if player_name:
-        player_data = get_player(player_name)  # استرجاع بيانات اللاعب
-        return render_template('index.html', player_data=player_data)
-    return render_template('index.html')
+# نقطة لحفظ عنوان المحفظة
+@app.route('/save-wallet-address', methods=['POST'])
+def save_wallet_address():
+    wallet_address = request.form.get('wallet_address')
 
-# إضافة مهمة Celery بسيطة
-@celery.task
-def add_numbers(a, b):
-    return a + b
-
-@app.route('/add')
-def add():
-    result = add_numbers.apply_async((5, 7))  # حساب 5 + 7 باستخدام Celery
-    return jsonify(result=result.get(timeout=10))  # الحصول على النتيجة
-
-# نقطة نهاية لاختبار الاتصال بقاعدة البيانات
-@app.route('/test-db-connection')
-def test_db_connection():
-    conn = get_db_connection()
-    if conn:
-        return "تم الاتصال بقاعدة البيانات بنجاح!"
-    else:
-        return "فشل الاتصال بقاعدة البيانات."
-
-# نقطة نهاية لحفظ بيانات اللاعب
-@app.route('/save-player', methods=['POST'])
-def save_player():
-    player_name = request.form.get('name')
-    player_progress = request.form.get('progress')
-
-    if not player_name or not player_progress:
-        return jsonify(message="اسم اللاعب أو التقدم مفقود"), 400
-
-    try:
-        player_progress = int(player_progress)
-        if not (0 <= player_progress <= 100):
-            return jsonify(message="التقدم يجب أن يكون بين 0 و 100"), 400
-    except ValueError:
-        return jsonify(message="التقدم يجب أن يكون قيمة عددية"), 400
+    if not wallet_address:
+        return jsonify(message="عنوان المحفظة مفقود"), 400
 
     try:
         conn = get_db_connection()
         if conn is None:
-            logger.error("لم يتم الاتصال بقاعدة البيانات.")
             return jsonify(message="فشل الاتصال بقاعدة البيانات."), 500
 
         cursor = conn.cursor()
 
-        # إضافة أو تحديث بيانات اللاعب
+        # تخزين عنوان المحفظة في قاعدة البيانات
         cursor.execute("""
-            INSERT INTO players (name, progress) 
-            VALUES (%s, %s)
-            ON CONFLICT (name) 
-            DO UPDATE SET progress = EXCLUDED.progress;
-        """, (player_name, player_progress))
-        
+            INSERT INTO wallets (address) 
+            VALUES (%s)
+        """, (wallet_address,))
+
         conn.commit()
-        logger.info(f"تم حفظ بيانات اللاعب: {player_name} - {player_progress}")
+        logger.info(f"تم حفظ عنوان المحفظة: {wallet_address}")
 
-        return jsonify(message="تم حفظ البيانات بنجاح")
+        return jsonify(message="تم حفظ عنوان المحفظة بنجاح")
     except Exception as e:
-        logger.error(f"حدث خطأ أثناء حفظ بيانات اللاعب: {e}")
-        return jsonify(message="فشل في حفظ البيانات"), 500
+        logger.error(f"حدث خطأ أثناء حفظ عنوان المحفظة: {e}")
+        return jsonify(message="فشل في حفظ عنوان المحفظة"), 500
     finally:
         if conn:
             cursor.close()
             conn.close()
-
-# نقطة لاسترجاع بيانات اللاعب
-@app.route('/get-player/<player_name>')
-def get_player(player_name):
-    try:
-        conn = get_db_connection()
-        if conn is None:
-            return "فشل الاتصال بقاعدة البيانات."
-
-        cursor = conn.cursor()
-
-        # استرجاع بيانات اللاعب
-        cursor.execute("SELECT * FROM players WHERE name = %s", (player_name,))
-        player_data = cursor.fetchone()
-
-        if player_data:
-            player_name = player_data[1]  # الاسم
-            player_progress = player_data[2]  # النقاط
-            return jsonify(name=player_name, progress=player_progress)
-        else:
-            return jsonify(message="لا يوجد لاعب بهذا الاسم")
-
-    except Exception as e:
-        logger.error(f"حدث خطأ أثناء استرجاع بيانات اللاعب: {e}")
-        return jsonify(message="فشل في استرجاع البيانات")
-    finally:
-        if conn:
-            cursor.close()
-            conn.close()
-
-# إعداد Webhook للبوت
-def set_webhook():
-    """
-    إعداد Webhook للبوت لتمرير التحديثات إلى التطبيق.
-    """
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
-    webhook_url = f"https://twq-xzy4.onrender.com/webhook"  # تأكد من استبدال رابط التطبيق الخاص بك
-
-    if not token or not webhook_url:
-        logger.error("لم يتم العثور على رمز البوت أو الرابط الخاص بالـ Webhook في المتغيرات البيئية.")
-        return
-
-    url = f"https://api.telegram.org/bot{token}/setWebhook?url={webhook_url}"
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            logger.info("تم تسجيل الـ Webhook بنجاح!")
-        else:
-            logger.error(f"فشل تسجيل الـ Webhook: {response.text}")
-    except Exception as e:
-        logger.error(f"حدث خطأ أثناء تسجيل الـ Webhook: {e}", exc_info=True)
-
-# نقطة استقبال Webhook من Telegram
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    """
-    استقبال التحديثات من Telegram عند استدعاء Webhook.
-    """
-    try:
-        data = request.json
-        # هنا يمكن معالجة البيانات المرسلة من Telegram
-        logger.info(f"Received data: {data}")
-
-        # تأكد من أن التحديث يحتوي على رسالة
-        if 'message' in data:
-            message = data['message']
-            user_id = message['from']['id']
-            user_name = message['from']['first_name']
-            text = message['text']
-
-            # على سبيل المثال: الرد على الرسالة
-            response = {
-                "chat_id": user_id,
-                "text": f"مرحبًا {user_name}, لقد استلمت رسالتك: {text}"
-            }
-            send_message(response)
-
-        return jsonify({"status": "ok"}), 200
-    except Exception as e:
-        logger.error(f"Error while processing the webhook: {e}", exc_info=True)
-        return jsonify({"status": "error", "message": str(e)}), 400
-
-# إرسال رسالة إلى Telegram باستخدام API
-def send_message(response):
-    """
-    إرسال رسالة إلى Telegram باستخدام API.
-    """
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    
-    try:
-        r = requests.post(url, data=response)
-        if r.status_code != 200:
-            logger.error(f"Error while sending message: {r.text}")
-    except Exception as e:
-        logger.error(f"Error while sending message: {e}", exc_info=True)
 
 if __name__ == '__main__':
-    set_webhook()  # إعداد Webhook عند بدء تشغيل التطبيق
     app.run(debug=True, host='0.0.0.0', port=10000)
