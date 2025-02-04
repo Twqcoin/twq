@@ -35,6 +35,7 @@ celery.conf.update(app.config)
 # إعداد الاتصال بقاعدة البيانات PostgreSQL بدون شهادات SSL
 def get_db_connection():
     attempts = 5
+    conn = None
     while attempts > 0:
         try:
             if not DATABASE_URL:
@@ -61,6 +62,9 @@ def get_db_connection():
                 return None
             logger.info(f"إعادة المحاولة... المحاولات المتبقية: {attempts}")
             time.sleep(5)
+        finally:
+            if conn:
+                conn.close()
 
 # دالة لإنشاء الجدول
 def create_players_table():
@@ -166,7 +170,8 @@ def save_player():
 # نقطة لاسترجاع بيانات اللاعب
 @app.route('/get-player/<player_name>')
 def get_player(player_name):
-    try:conn = get_db_connection()
+    try:
+        conn = get_db_connection()
         if conn is None:
             return "فشل الاتصال بقاعدة البيانات."
 
