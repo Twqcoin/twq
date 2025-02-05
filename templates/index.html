@@ -31,6 +31,8 @@
       var fullscreenButton = document.querySelector("#unity-fullscreen-button");
       var warningBanner = document.querySelector("#unity-warning");
 
+      // Shows a temporary message banner/ribbon for a few seconds, or
+      // a permanent error message on top of the canvas if type=='error'..
       function unityShowBanner(msg, type) {
         function updateBannerVisibility() {
           warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
@@ -49,7 +51,7 @@
         updateBannerVisibility();
       }
 
-      var buildUrl = "{{ url_for('static', filename='Build') }}"; 
+      var buildUrl = "{{ url_for('static', filename='Build') }}";
       var loaderUrl = buildUrl + "/app.loader.js";
       var config = {
         dataUrl: buildUrl + "/app.data",
