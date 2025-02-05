@@ -68,28 +68,29 @@ def get_db_connection():
 
 # دالة لإنشاء الجدول
 def create_players_table():
+    conn = None
     try:
         conn = get_db_connection()
         if conn is None:
+            logger.error("فشل في الاتصال بقاعدة البيانات، لن يتم إنشاء الجدول.")
             return
 
-        cursor = conn.cursor()
+        with conn.cursor() as cursor:  # استخدام `with` لإدارة الـ cursor تلقائياً
+            cursor.execute(""" 
+                CREATE TABLE IF NOT EXISTS players (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(100) UNIQUE NOT NULL,
+                    progress INT CHECK (progress >= 0 AND progress <= 100) NOT NULL
+                );
+            """)
+            conn.commit()
+            logger.info("تم إنشاء الجدول بنجاح.")
 
-        # إنشاء جدول اللاعبين
-        cursor.execute(""" 
-            CREATE TABLE IF NOT EXISTS players (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(100) NOT NULL,
-                progress INT CHECK (progress >= 0 AND progress <= 100) NOT NULL
-            );
-        """)
-        conn.commit()
-        logger.info("تم إنشاء الجدول بنجاح.")
     except Exception as e:
-        logger.error(f"حدث خطأ أثناء إنشاء الجدول:{e}")
+        logger.error(f"حدث خطأ أثناء إنشاء الجدول: {e}")
+    
     finally:
-        if conn:
-            cursor.close()
+        if conn:  # التأكد من إغلاق الاتصال فقط إذا كان مفتوحًا
             conn.close()
 
 # تنفيذ الدالة لإنشاء الجدول عند بدء تشغيل التطبيق
@@ -145,26 +146,24 @@ def save_player():
             logger.error("لم يتم الاتصال بقاعدة البيانات.")
             return jsonify(message="فشل الاتصال بقاعدة البيانات."), 500
 
-        cursor = conn.cursor()
+        with conn.cursor() as cursor:
+            # إضافة أو تحديث بيانات اللاعب
+            cursor.execute("""
+                INSERT INTO players (name, progress) 
+                VALUES (%s, %s)
+                ON CONFLICT (name) 
+                DO UPDATE SET progress = EXCLUDED.progress;
+            """, (player_name, player_progress))
 
-        # إضافة أو تحديث بيانات اللاعب
-        cursor.execute("""
-            INSERT INTO players (name, progress) 
-            VALUES (%s, %s)
-            ON CONFLICT (name) 
-            DO UPDATE SET progress = EXCLUDED.progress;
-        """, (player_name, player_progress))
-        
-        conn.commit()
-        logger.info(f"تم حفظ بيانات اللاعب: {player_name} - {player_progress}")
+            conn.commit()
+            logger.info(f"تم حفظ بيانات اللاعب: {player_name} - {player_progress}")
 
-        return jsonify(message="تم حفظ البيانات بنجاح")
+            return jsonify(message="تم حفظ البيانات بنجاح")
     except Exception as e:
         logger.error(f"حدث خطأ أثناء حفظ بيانات اللاعب: {e}")
         return jsonify(message="فشل في حفظ البيانات"), 500
     finally:
         if conn:
-            cursor.close()
             conn.close()
 
 # نقطة لاسترجاع بيانات اللاعب
@@ -175,25 +174,23 @@ def get_player(player_name):
         if conn is None:
             return "فشل الاتصال بقاعدة البيانات."
 
-        cursor = conn.cursor()
+        with conn.cursor() as cursor:
+            # استرجاع بيانات اللاعب
+            cursor.execute("SELECT * FROM players WHERE name = %s", (player_name,))
+            player_data = cursor.fetchone()
 
-        # استرجاع بيانات اللاعب
-        cursor.execute("SELECT * FROM players WHERE name = %s", (player_name,))
-        player_data = cursor.fetchone()
-
-        if player_data:
-            player_name = player_data[1]  # الاسم
-            player_progress = player_data[2]  # النقاط
-            return jsonify(name=player_name, progress=player_progress)
-        else:
-            return jsonify(message="لا يوجد لاعب بهذا الاسم")
+            if player_data:
+                player_name = player_data[1]  # الاسم
+                player_progress = player_data[2]  # النقاط
+                return jsonify(name=player_name, progress=player_progress)
+            else:
+                return jsonify(message="لا يوجد لاعب بهذا الاسم")
 
     except Exception as e:
         logger.error(f"حدث خطأ أثناء استرجاع بيانات اللاعب: {e}")
         return jsonify(message="فشل في استرجاع البيانات")
     finally:
         if conn:
-            cursor.close()
             conn.close()
 
 # إعداد Webhook للبوت
