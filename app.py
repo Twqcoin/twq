@@ -49,7 +49,7 @@ def get_db_connection():
                 database=DB_NAME,
                 user=DB_USER,
                 password=DB_PASSWORD,
-                host=DB_HOST,  # استخدام اسم الخدمة الداخلية لـ PostgreSQL
+                host=DB_HOST,
                 port=DB_PORT
             )
             logger.info("تم الاتصال بقاعدة بيانات PostgreSQL بنجاح.")
@@ -66,113 +66,13 @@ def get_db_connection():
             if conn:
                 conn.close()
 
-# دالة لإنشاء الجدول
-def create_players_table():
-    conn = None
-    try:
-        conn = get_db_connection()
-        if conn is None:
-            logger.error("فشل في الاتصال بقاعدة البيانات، لن يتم إنشاء الجدول.")
-            return
-
-        with conn.cursor() as cursor:  # استخدام `with` لإدارة الـ cursor تلقائياً
-            cursor.execute(""" 
-                CREATE TABLE IF NOT EXISTS players (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(100) UNIQUE NOT NULL,
-                    progress INT CHECK (progress >= 0 AND progress <= 100) NOT NULL
-                );
-            """)
-            conn.commit()
-            logger.info("تم إنشاء الجدول بنجاح.")
-
-    except Exception as e:
-        logger.error(f"حدث خطأ أثناء إنشاء الجدول: {e}")
-    
-    finally:
-        if conn:  # التأكد من إغلاق الاتصال فقط إذا كان مفتوحًا
-            conn.close()
-
-# تنفيذ الدالة لإنشاء الجدول عند بدء تشغيل التطبيق
-create_players_table()
-
-# مسار رئيسي لفتح التطبيق
-@app.route('/')
-def index():
-    player_name = request.args.get('name', '')  # إذا كان هناك اسم لاعب في العنوان
-    if player_name:
-        player_data = get_player(player_name)  # استرجاع بيانات اللاعب
-        return render_template('index.html', player_data=player_data)
-    return render_template('index.html')
-
-# إضافة مهمة Celery بسيطة
-@celery.task
-def add_numbers(a, b):
-    return a + b
-
-@app.route('/add')
-def add():
-    result = add_numbers.apply_async((5, 7))  # حساب 5 + 7 باستخدام Celery
-    return jsonify(result=result.get(timeout=10))  # الحصول على النتيجة
-
-# نقطة نهاية لاختبار الاتصال بقاعدة البيانات
-@app.route('/test-db-connection')
-def test_db_connection():
-    conn = get_db_connection()
-    if conn:
-        return "تم الاتصال بقاعدة البيانات بنجاح!"
-    else:
-        return "فشل الاتصال بقاعدة البيانات."
-
-# نقطة نهاية لحفظ بيانات اللاعب
-@app.route('/save-player', methods=['POST'])
-def save_player():
-    player_name = request.form.get('name')
-    player_progress = request.form.get('progress')
-
-    if not player_name or not player_progress:
-        return jsonify(message="اسم اللاعب أو التقدم مفقود"), 400
-
-    try:
-        player_progress = int(player_progress)
-        if not (0 <= player_progress <= 100):
-            return jsonify(message="التقدم يجب أن يكون بين 0 و 100"), 400
-    except ValueError:
-        return jsonify(message="التقدم يجب أن يكون قيمة عددية"), 400
-
-    try:
-        conn = get_db_connection()
-        if conn is None:
-            logger.error("لم يتم الاتصال بقاعدة البيانات.")
-            return jsonify(message="فشل الاتصال بقاعدة البيانات."), 500
-
-        with conn.cursor() as cursor:
-            # إضافة أو تحديث بيانات اللاعب
-            cursor.execute("""
-                INSERT INTO players (name, progress) 
-                VALUES (%s, %s)
-                ON CONFLICT (name) 
-                DO UPDATE SET progress = EXCLUDED.progress;
-            """, (player_name, player_progress))
-
-            conn.commit()
-            logger.info(f"تم حفظ بيانات اللاعب: {player_name} - {player_progress}")
-
-            return jsonify(message="تم حفظ البيانات بنجاح")
-    except Exception as e:
-        logger.error(f"حدث خطأ أثناء حفظ بيانات اللاعب: {e}")
-        return jsonify(message="فشل في حفظ البيانات"), 500
-    finally:
-        if conn:
-            conn.close()
-
 # نقطة لاسترجاع بيانات اللاعب
 @app.route('/get-player/<player_name>')
 def get_player(player_name):
     try:
         conn = get_db_connection()
         if conn is None:
-            return "فشل الاتصال بقاعدة البيانات."
+            return jsonify(message="فشل الاتصال بقاعدة البيانات.")
 
         with conn.cursor() as cursor:
             # استرجاع بيانات اللاعب
