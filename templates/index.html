@@ -3,131 +3,26 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Unity WebGL Player | twq-master</title>
     <link rel="shortcut icon" href="{{ url_for('static', filename='TemplateData/favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='TemplateData/style.css') }}">
-    <style>
-      #unity-fullscreen-button {
-        display: none; /* إخفاء زر الشاشة الكاملة */
-      }
-
-      /* تنسيق نموذج تحديث التقدم */
-      #progress-form {
-        margin-top: 20px;
-        background-color: #fff;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        width: 90%;
-        max-width: 400px;
-        margin: 20px auto;
-      }
-
-      h3 {
-        font-size: 1.5em;
-        color: #333;
-      }
-
-      input[type="text"],
-      input[type="number"] {
-        width: 100%;
-        padding: 10px;
-        margin: 10px 0;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-      }
-
-      button {
-        background-color: #76c7c0;
-        color: #fff;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        width: 100%;
-        font-size: 1.2em;
-      }
-
-      button:hover {
-        background-color: #5da6a0;
-      }
-
-      #responseMessage {
-        margin-top: 20px;
-        color: #d9534f;
-      }
-
-      .player-info {
-        display: flex;
-        align-items: center;
-        margin-top: 20px;
-        border: 1px solid #ccc;
-        padding: 10px;
-        border-radius: 8px;
-        background-color: #f9f9f9;
-      }
-
-      .player-info img {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        margin-right: 10px;
-      }
-
-      .player-info p {
-        margin: 0;
-        font-size: 1.2em;
-      }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/@tonclient/core"></script>
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas"></canvas>
+      <canvas id="unity-canvas" width=1920 height=1040></canvas>
       <div id="unity-loading-bar">
         <div id="unity-logo"></div>
         <div id="unity-progress-bar-empty">
           <div id="unity-progress-bar-full"></div>
         </div>
       </div>
-      <div id="unity-warning"></div>
+      <div id="unity-warning"> </div>
       <div id="unity-footer">
         <div id="unity-webgl-logo"></div>
         <div id="unity-fullscreen-button"></div>
         <div id="unity-build-title">twq-master</div>
       </div>
     </div>
-
-    <!-- نموذج إدخال تقدم اللاعب -->
-    <div id="progress-form">
-      <h3>تحديث تقدم اللاعب</h3>
-      <form id="updateProgressForm">
-        <label for="playerName">اسم اللاعب:</label>
-        <input type="text" id="playerName" required>
-        <br>
-        <label for="progress">التقدم (%):</label>
-        <input type="number" id="progress" min="0" max="100" required>
-        <br>
-        <label for="playerImage">رابط صورة اللاعب:</label>
-        <input type="text" id="playerImage" required>
-        <br>
-        <button type="submit">تحديث التقدم</button>
-      </form>
-      <p id="responseMessage"></p>
-
-      <!-- عرض بيانات اللاعب بعد التحديث -->
-      <div id="playerDisplay" class="player-info" style="display: none;">
-        <img id="playerImageDisplay" src="" alt="Player Image">
-        <p id="playerNameDisplay"></p>
-        <p id="playerProgressDisplay"></p>
-      </div>
-    </div>
-
-    <noscript>
-      <p>يجب تفعيل JavaScript لتشغيل هذا التطبيق.</p>
-    </noscript>
-    
     <script>
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
@@ -176,8 +71,8 @@
         canvas.className = "unity-mobile";
         unityShowBanner('WebGL builds are not supported on mobile devices.');
       } else {
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
+        canvas.style.width = "1920px";
+        canvas.style.height = "1040px";
       }
 
       canvas.style.background = "url('" + buildUrl + "/app.jpg') center / cover";
@@ -190,82 +85,14 @@
           progressBarFull.style.width = 100 * progress + "%";
         }).then((unityInstance) => {
           loadingBar.style.display = "none";
-          unityInstance.SetFullscreen(1); // فتح الشاشة بشكل كامل تلقائيًا
+          fullscreenButton.onclick = () => {
+            unityInstance.SetFullscreen(1);
+          };
         }).catch((message) => {
           alert(message);
         });
       };
       document.body.appendChild(script);
-
-      // التعامل مع نموذج تحديث التقدم
-      document.getElementById('updateProgressForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        var playerName = document.getElementById('playerName').value;
-        var progress = document.getElementById('progress').value;
-        var playerImage = document.getElementById('playerImage').value;
-
-        // إرسال البيانات إلى Flask عبر AJAX
-        fetch('/update_progress', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            name: playerName,
-            progress: progress,
-            image: playerImage
-          })
-        })
-        .then(response => response.json())
-        .then(data => {
-          document.getElementById('responseMessage').textContent = data.message;
-
-          // عرض صورة واسم اللاعب في الصفحة
-          document.getElementById('playerNameDisplay').textContent = playerName;
-          document.getElementById('playerProgressDisplay').textContent = "التقدم: " + progress + "%";
-          document.getElementById('playerImageDisplay').src = playerImage;
-          document.getElementById('playerDisplay').style.display = 'flex'; // إظهار بيانات اللاعب
-        })
-        .catch(error => {
-          document.getElementById('responseMessage').textContent = "حدث خطأ: " + error;
-        });
-      });
-
-      // وظيفة ربط المحفظة
-      async function connectTonWallet() {
-        const tonClient = new TonClient({
-          network: {
-            serverAddress: "https://testnet.toncenter.com/api/v2/jsonRPC"
-          }
-        });
-
-        try {
-          const result = await tonClient.wallets.getAccount();
-          console.log("محفظة متصلة:", result);
-
-          const walletAddress = result.address;
-          alert('محفظتك: ' + walletAddress);
-        } catch (error) {
-          console.error("فشل الاتصال بالمحفظة:", error);
-        }
-      }
-
-      // إضافة زر للاتصال بالمحفظة
-      const walletButton = document.createElement('button');
-      walletButton.textContent = 'اتصال بالمحفظة';
-      walletButton.onclick = connectTonWallet;
-      document.body.appendChild(walletButton);
-
-    </script>
-
-    <!-- إضافة سكربت Telegram بعد تحميل باقي الصفحة -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script>
-      if (window.Telegram && window.Telegram.WebApp) {
-        Telegram.WebApp.ready();
-        Telegram.WebApp.expand();
-      }
     </script>
   </body>
 </html>
