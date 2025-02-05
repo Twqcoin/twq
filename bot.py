@@ -1,10 +1,9 @@
 import os
-import logging
-import psycopg2
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from flask import Flask, request, jsonify
 from dotenv import load_dotenv
+import psycopg2
 from urllib.parse import urlparse
+import logging
 
 # تحميل المتغيرات البيئية
 load_dotenv()
@@ -14,6 +13,8 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
+
+app = Flask(__name__)
 
 # إعداد اتصال بقاعدة بيانات PostgreSQL
 def get_db_connection():
@@ -61,37 +62,6 @@ def create_db():
         if conn:
             conn.close()
 
-# إضافة لاعب إلى قاعدة البيانات
-def add_player_to_db(player_name, player_image_url):
-    try:
-        conn = get_db_connection()
-        if conn is None:
-            return
-        with conn.cursor() as cursor:
-            cursor.execute("INSERT INTO players (name, image_url, progress) VALUES (%s, %s, %s)", 
-                           (player_name, player_image_url, 0))
-            conn.commit()
-    except Exception as e:
-        logger.error(f"حدث خطأ أثناء إضافة اللاعب: {e}", exc_info=True)
-    finally:
-        if conn:
-            conn.close()
-
-# تحديث تقدم لاعب
-def update_player_progress(player_name, progress):
-    try:
-        conn = get_db_connection()
-        if conn is None:
-            return
-        with conn.cursor() as cursor:
-            cursor.execute("UPDATE players SET progress = %s WHERE name = %s", (progress, player_name))
-            conn.commit()
-    except Exception as e:
-        logger.error(f"حدث خطأ أثناء تحديث التقدم: {e}", exc_info=True)
-    finally:
-        if conn:
-            conn.close()
-
 # استرجاع تقدم لاعب
 def get_player_progress(player_name):
     try:
@@ -109,57 +79,56 @@ def get_player_progress(player_name):
         if conn:
             conn.close()
 
-# تعريف الأمر /start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton("Play Game", web_app={"url": "https://twq-xzy4.onrender.com"})]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("مرحبًا! اضغط على الزر أدناه للعب:", reply_markup=reply_markup)
+# إضافة لاعب إلى قاعدة البيانات
+@app.route('/add_player', methods=['POST'])
+def add_player():
+    data = request.get_json()
+    if 'name' not in data or 'image_url' not in data:
+        return jsonify({"error": "الاسم ورابط الصورة مطلوبان."}), 400
+    player_name = data['name']
+    player_image_url = data['image_url']
+    
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            return jsonify({"error": "فشل الاتصال بقاعدة البيانات."}), 500
+        with conn.cursor() as cursor:
+            cursor.execute("INSERT INTO players (name, image_url, progress) VALUES (%s, %s, %s)", 
+                           (player_name, player_image_url, 0))
+            conn.commit()
+        return jsonify({"message": f"تم إضافة اللاعب {player_name} بنجاح!"}), 201
+    except Exception as e:
+        logger.error(f"حدث خطأ أثناء إضافة اللاعب: {e}", exc_info=True)
+        return jsonify({"error": "حدث خطأ أثناء إضافة اللاعب."}), 500
+    finally:
+        if conn:
+            conn.close()
 
-# تعريف الأمر /add_player
-async def add_player(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if len(context.args) < 2:
-        await update.message.reply_text("الاستخدام: /add_player <الاسم> <رابط الصورة>")
-        return
-    player_name, player_image_url = context.args[0], context.args[1]
-    if not player_image_url.startswith(("http://", "https://")):
-        await update.message.reply_text("رابط الصورة غير صالح.")
-        return
-    add_player_to_db(player_name, player_image_url)
-    await update.message.reply_text(f"تم إضافة اللاعب {player_name} بنجاح!")
+# استرجاع بيانات لاعب
+@app.route('/get_player/<name>', methods=['GET'])
+def get_player(name):
+    progress = get_player_progress(name)
+    if progress is None:
+        return jsonify({"error": "لا يوجد لاعب بهذا الاسم."}), 404
+    return jsonify({"name": name, "progress": progress}), 200
 
-# تعريف أمر لعرض تقدم اللاعب
-async def progress(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("الاستخدام: /progress <الاسم>")
-        return
-    player_name = context.args[0]
+# استرجاع تقدم لاعب عبر API
+@app.route('/get_progress', methods=['POST'])
+def get_progress():
+    data = request.get_json()
+    if 'name' not in data:
+        return jsonify({"error": "الاسم مطلوب."}), 400
+    player_name = data['name']
     progress = get_player_progress(player_name)
-    await update.message.reply_text(f"تقدم اللاعب {player_name}: {progress}%")
+    if progress is None:
+        return jsonify({"error": "لا يوجد لاعب بهذا الاسم."}), 404
+    return jsonify({"name": player_name, "progress": progress}), 200
 
-# تعريف أمر /help
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    help_text = """
-    🤖 **قائمة الأوامر المتاحة:**
-    🔹 `/start` - بدء استخدام البوت وعرض زر تشغيل اللعبة.
-    🔹 `/add_player <الاسم> <رابط الصورة>` - إضافة لاعب جديد إلى قاعدة البيانات.
-    🔹 `/progress <الاسم>` - عرض تقدم اللاعب المسجل في اللعبة.
-    🔹 `/help` - عرض هذه القائمة.
-    """
-    await update.message.reply_text(help_text, parse_mode="Markdown")
+# نقطة الدخول الرئيسية (صفحة البداية)
+@app.route('/')
+def index():
+    return jsonify({"message": "مرحبًا بك في API للبوت!"})
 
-# تشغيل البوت
-def main():
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
-    if not token:
-        logger.error("لم يتم العثور على رمز البوت في المتغيرات البيئية.")
-        return
-    application = ApplicationBuilder().token(token).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("add_player", add_player))
-    application.add_handler(CommandHandler("progress", progress))
-    application.add_handler(CommandHandler("help", help_command))
+if __name__ == '__main__':
     create_db()
-    application.run_polling()
-
-if __name__ == "__main__":
-    main()
+    app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
