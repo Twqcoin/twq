@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect, url_for, send_from_directory
 from dotenv import load_dotenv
 import psycopg2
 from urllib.parse import urlparse
@@ -14,7 +14,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')  # تعريف مجلد static لتخزين ملفات Unity
 
 # إعداد اتصال بقاعدة بيانات PostgreSQL
 def get_db_connection():
@@ -124,10 +124,15 @@ def get_progress():
         return jsonify({"error": "لا يوجد لاعب بهذا الاسم."}), 404
     return jsonify({"name": player_name, "progress": progress}), 200
 
-# نقطة الدخول الرئيسية (صفحة البداية)
+# فتح تطبيق Unity WebGL بدلاً من رسالة JSON
 @app.route('/')
 def index():
-    return jsonify({"message": "مرحبًا بك في API للبوت!"})
+    return redirect(url_for('static', filename='index.html'))  # إعادة توجيه المستخدم إلى Unity
+
+# تمكين فتح ملفات Unity WebGL مباشرة
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory('static', filename)
 
 if __name__ == '__main__':
     create_db()
