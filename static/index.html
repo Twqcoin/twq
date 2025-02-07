@@ -35,21 +35,11 @@
       var warningBanner = document.querySelector("#unity-warning");
 
       function unityShowBanner(msg, type) {
-        function updateBannerVisibility() {
-          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-        }
         var div = document.createElement('div');
         div.innerHTML = msg;
         warningBanner.appendChild(div);
-        if (type == 'error') div.style = 'background: red; padding: 10px;';
-        else {
-          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-          setTimeout(function() {
-            warningBanner.removeChild(div);
-            updateBannerVisibility();
-          }, 5000);
-        }
-        updateBannerVisibility();
+        div.style = type == 'error' ? 'background: red; padding: 10px;' : 'background: yellow; padding: 10px;';
+        setTimeout(() => { warningBanner.removeChild(div); }, 5000);
       }
 
       var buildUrl = "Build";
@@ -72,7 +62,6 @@
         document.getElementsByTagName('head')[0].appendChild(meta);
         container.className = "unity-mobile";
         canvas.className = "unity-mobile";
-
         unityShowBanner('WebGL builds are not supported on mobile devices.');
       } else {
         canvas.style.width = "1920px";
@@ -89,43 +78,28 @@
           progressBarFull.style.width = 100 * progress + "%";
         }).then((unityInstance) => {
           loadingBar.style.display = "none";
-          fullscreenButton.onclick = () => {
-            unityInstance.SetFullscreen(1);
-          };
-        }).catch((message) => {
-          alert(message);
-        });
+          fullscreenButton.onclick = () => { unityInstance.SetFullscreen(1); };
+        }).catch((message) => { alert(message); });
       };
       document.body.appendChild(script);
 
-      // 🔹 وظيفة نسخ رابط الإحالة (لا تضيف نقاط)
+      // ✅ دالة نسخ رابط الإحالة (بدون احتساب نقاط)
       function copyReferralLink() {
-          const userID = "USER123"; // استبدل هذا بالمعرف الفعلي للمستخدم
+          const userID = "USER123"; // استبدل بالمعرف الفعلي للمستخدم
           const referralLink = `https://yourgame.com/?ref=${userID}`;
-          
           navigator.clipboard.writeText(referralLink).then(() => {
               alert("تم نسخ رابط الإحالة! شاركه مع أصدقائك.");
           });
-
-          // ✅ لا يتم احتساب أي نقاط هنا
       }
 
-      // 🔹 التقاط معرف الإحالة عند دخول المستخدم الجديد
-      function getReferralId() {
+      // ✅ تسجيل الإحالة عند دخول لاعب جديد فقط لأول مرة
+      function registerReferral() {
           const urlParams = new URLSearchParams(window.location.search);
-          return urlParams.get('ref');
-      }
+          const referrerId = urlParams.get('ref');
 
-      const referrerId = getReferralId();
-      if (referrerId) {
-          localStorage.setItem("referrer", referrerId);
-      }
+          if (referrerId && !localStorage.getItem("registeredReferral")) {
+              localStorage.setItem("registeredReferral", "true"); // يمنع احتساب الإحالة أكثر من مرة
 
-      // 🔹 احتساب النقاط فقط عند تسجيل اللاعب الجديد
-      function rewardReferrer() {
-          const referrerId = localStorage.getItem("referrer");
-
-          if (referrerId) {
               fetch("https://yourgame.com/api/reward", {
                   method: "POST",
                   body: JSON.stringify({ referrer: referrerId }),
@@ -133,33 +107,32 @@
               })
               .then(response => response.json())
               .then(data => {
-                  console.log("Referral reward added:", data);
-                  localStorage.removeItem("referrer"); // منع احتساب النقاط أكثر من مرة
+                  console.log("✅ تم احتساب الإحالة بنجاح:", data);
               })
-              .catch(error => console.error("Error rewarding referrer:", error));
+              .catch(error => console.error("❌ خطأ في تسجيل الإحالة:", error));
           }
       }
 
-      // ✅ تأكد من استدعاء هذه الدالة فقط عند إكمال تسجيل اللاعب الجديد
+      // ✅ استدعاء التسجيل عند دخول المستخدم
+      registerReferral();
 
-      // ✅ دالة لحفظ تسجيل الدخول اليومي
+      // ✅ منع احتساب المكافأة اليومية أكثر من مرة
       function checkDailyLogin() {
-          const today = new Date().toISOString().split('T')[0]; // 🔹 الحصول على تاريخ اليوم فقط (YYYY-MM-DD)
+          const today = new Date().toISOString().split('T')[0]; 
           const lastLogin = localStorage.getItem("lastLoginDate");
 
           if (lastLogin !== today) {
-              localStorage.setItem("lastLoginDate", today); // 🔹 تحديث تاريخ آخر تسجيل دخول
-              rewardDailyLogin(); // 🔹 مكافأة تسجيل الدخول اليومي
+              localStorage.setItem("lastLoginDate", today);
+              rewardDailyLogin();
           } else {
-              console.log("🎉 لقد قمت بتسجيل الدخول اليوم بالفعل!");
+              console.log("🎉 تسجيل الدخول اليومي تم مسبقًا!");
           }
       }
 
-      // ✅ دالة لإرسال المكافأة إلى اللاعب
       function rewardDailyLogin() {
           fetch("https://yourgame.com/api/daily-reward", {
               method: "POST",
-              body: JSON.stringify({ userId: "USER123" }), // استبدل بالمعرف الفعلي للاعب
+              body: JSON.stringify({ userId: "USER123" }),
               headers: { "Content-Type": "application/json" }
           })
           .then(response => response.json())
@@ -169,7 +142,6 @@
           .catch(error => console.error("❌ خطأ في تسجيل الدخول اليومي:", error));
       }
 
-      // ✅ استدعاء التحقق عند تشغيل اللعبة
       checkDailyLogin();
     </script>
   </body>
