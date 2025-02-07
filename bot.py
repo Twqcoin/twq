@@ -5,6 +5,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
 import requests
+from urllib.parse import urlparse
 
 # تحميل المتغيرات البيئية
 load_dotenv()
@@ -46,15 +47,24 @@ async def start_mining(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("الاستخدام: /start_mining <userId>")
         return
     user_id = context.args[0]
+
+    # إضافة أو تحديث التقدم في قاعدة البيانات
     try:
+        conn = get_db_connection()
+        if conn:
+            with conn.cursor() as cursor:
+                cursor.execute("UPDATE players SET progress = progress + 1 WHERE name = %s", (user_id,))
+                conn.commit()
+            conn.close()
+
         response = requests.post("https://twq-xzy4.onrender.com/start-mining", json={"userId": user_id})
         if response.status_code == 200:
             await update.message.reply_text("تم بدء التعدين بنجاح!")
         else:
             await update.message.reply_text("حدث خطأ أثناء بدء التعدين.")
     except Exception as e:
-        logger.error(f"خطأ في الاتصال بـ API: {e}")
-        await update.message.reply_text("حدث خطأ أثناء الاتصال بـ API.")
+        logger.error(f"خطأ في الاتصال بـ API أو قاعدة البيانات: {e}")
+        await update.message.reply_text("حدث خطأ أثناء الاتصال بـ API أو قاعدة البيانات.")
 
 # تعريف أمر لإضافة إحالة
 async def add_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
