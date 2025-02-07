@@ -40,45 +40,6 @@ def get_db_connection():
         logger.error(f"فشل الاتصال بقاعدة البيانات: {e}", exc_info=True)
         return None
 
-# إنشاء قاعدة البيانات (إذا لم تكن موجودة)
-def create_db():
-    """
-    إنشاء جدول players إذا لم يكن موجودًا.
-    """
-    try:
-        conn = get_db_connection()
-        if conn is None:
-            return
-        with conn.cursor() as cursor:
-            cursor.execute('''CREATE TABLE IF NOT EXISTS players (
-                                id SERIAL PRIMARY KEY,
-                                name TEXT NOT NULL,
-                                image_url TEXT NOT NULL,
-                                progress INTEGER DEFAULT 0)''')
-            conn.commit()
-    except Exception as e:
-        logger.error(f"حدث خطأ أثناء إنشاء الجدول: {e}", exc_info=True)
-    finally:
-        if conn:
-            conn.close()
-
-# استرجاع تقدم لاعب
-def get_player_progress(player_name):
-    try:
-        conn = get_db_connection()
-        if conn is None:
-            return None
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT progress FROM players WHERE name = %s", (player_name,))
-            progress = cursor.fetchone()
-            return progress[0] if progress else 0
-    except Exception as e:
-        logger.error(f"حدث خطأ أثناء استرجاع التقدم: {e}", exc_info=True)
-        return None
-    finally:
-        if conn:
-            conn.close()
-
 # إضافة لاعب إلى قاعدة البيانات
 @app.route('/add_player', methods=['POST'])
 def add_player():
@@ -104,25 +65,33 @@ def add_player():
         if conn:
             conn.close()
 
-# استرجاع بيانات لاعب
-@app.route('/get_player/<name>', methods=['GET'])
-def get_player(name):
-    progress = get_player_progress(name)
-    if progress is None:
-        return jsonify({"error": "لا يوجد لاعب بهذا الاسم."}), 404
-    return jsonify({"name": name, "progress": progress}), 200
-
-# استرجاع تقدم لاعب عبر API
-@app.route('/get_progress', methods=['POST'])
-def get_progress():
+# نقطة النهاية لبدء التعدين
+@app.route('/start-mining', methods=['POST'])
+def start_mining():
     data = request.get_json()
-    if 'name' not in data:
-        return jsonify({"error": "الاسم مطلوب."}), 400
-    player_name = data['name']
-    progress = get_player_progress(player_name)
-    if progress is None:
-        return jsonify({"error": "لا يوجد لاعب بهذا الاسم."}), 404
-    return jsonify({"name": player_name, "progress": progress}), 200
+    if 'userId' not in data:
+        return jsonify({"error": "المعرف مطلوب."}), 400
+
+    user_id = data['userId']
+
+    # محاكاة عملية التعدين (يمكنك إضافة الكود الفعلي هنا)
+    logger.info(f"تم بدء التعدين للمستخدم: {user_id}")
+
+    return jsonify({"message": "تم بدء التعدين بنجاح!"}), 200
+
+# نقطة النهاية لإضافة إحالة
+@app.route('/add-referral', methods=['POST'])
+def add_referral():
+    data = request.get_json()
+    if 'userId' not in data:
+        return jsonify({"error": "المعرف مطلوب."}), 400
+
+    user_id = data['userId']
+
+    # إضافة الإحالة إلى قاعدة البيانات أو المحاكاة
+    logger.info(f"تم إضافة إحالة للمستخدم: {user_id}")
+
+    return jsonify({"message": "تم إضافة الإحالة بنجاح!"}), 200
 
 # فتح تطبيق Unity WebGL بدلاً من رسالة JSON
 @app.route('/')
@@ -135,5 +104,4 @@ def serve_static(filename):
     return send_from_directory('static', filename)
 
 if __name__ == '__main__':
-    create_db()
     app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
