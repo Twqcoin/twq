@@ -32,6 +32,62 @@
     </div>
 
     <script>
+        var container = document.querySelector("#unity-container");
+        var canvas = document.querySelector("#unity-canvas");
+        var loadingBar = document.querySelector("#unity-loading-bar");
+        var progressBarFull = document.querySelector("#unity-progress-bar-full");
+        var fullscreenButton = document.querySelector("#unity-fullscreen-button");
+        var warningBanner = document.querySelector("#unity-warning");
+
+        // Initialize Unity WebGL instance
+        var buildUrl = "Build";
+        var loaderUrl = buildUrl + "/app.loader.js";
+        var config = {
+            dataUrl: buildUrl + "/app.data",
+            frameworkUrl: buildUrl + "/app.framework.js",
+            codeUrl: buildUrl + "/app.wasm",
+            streamingAssetsUrl: "StreamingAssets",
+            companyName: "DefaultCompany",
+            productName: "Game",
+            productVersion: "1.0",
+            showBanner: unityShowBanner,
+        };
+
+        function unityShowBanner(msg, type) {
+            function updateBannerVisibility() {
+                warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+            }
+            var div = document.createElement('div');
+            div.innerHTML = msg;
+            warningBanner.appendChild(div);
+            if (type == 'error') div.style = 'background: red; padding: 10px;';
+            else {
+                if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+                setTimeout(function() {
+                    warningBanner.removeChild(div);
+                    updateBannerVisibility();
+                }, 5000);
+            }
+            updateBannerVisibility();
+        }
+
+        // Loading Unity WebGL player
+        var script = document.createElement("script");
+        script.src = loaderUrl;
+        script.onload = () => {
+            createUnityInstance(canvas, config, (progress) => {
+                progressBarFull.style.width = 100 * progress + "%";
+            }).then((unityInstance) => {
+                loadingBar.style.display = "none";
+                fullscreenButton.onclick = () => {
+                    unityInstance.SetFullscreen(1);
+                };
+            }).catch((message) => {
+                alert(message);
+            });
+        };
+        document.body.appendChild(script);
+
         // Event for Start Mining button
         document.getElementById('start-mining-btn').addEventListener('click', function() {
             startMining();
@@ -45,14 +101,19 @@
         // Function to start mining and call API
         function startMining() {
             console.log("Starting mining...");
-            fetch("https://your-app-name.onrender.com/start-mining", {  // Update to Render's URL
+            fetch("/start-mining", {  // استخدم المسار النسبي للاتصال بخادم Flask
                 method: "POST",
-                body: JSON.stringify({ userId: "USER123" }),  // Example user ID
+                body: JSON.stringify({ userId: "USER123" }),  // مثال لمعرّف المستخدم
                 headers: {
                     "Content-Type": "application/json"
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error connecting to the server');
+                }
+                return response.json();
+            })
             .then(data => {
                 console.log("Mining started successfully:", data);
                 alert("Mining has started!");
@@ -65,7 +126,7 @@
 
         // Function to copy referral link to clipboard
         function copyReferralLink() {
-            const referralLink = window.location.href + "?ref=USER123";  // Example referral link with user ID
+            const referralLink = window.location.href + "?ref=USER123";  // مثال لرابط الإحالة
             navigator.clipboard.writeText(referralLink).then(() => {
                 alert("Referral link copied to clipboard!");
             }).catch(err => {
