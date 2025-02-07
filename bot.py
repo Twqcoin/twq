@@ -63,7 +63,7 @@ async def add_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user_id = context.args[0]
     try:
-        response = requests.post("https://your-app-name.onrender.com/add-referral", json={"userId": user_id})
+        response = requests.post("https://twq-xzy4.onrender.com/add-referral", json={"userId": user_id})
         if response.status_code == 200:
             await update.message.reply_text("تم إضافة الإحالة بنجاح!")
         else:
