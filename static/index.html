@@ -23,6 +23,9 @@
         <div id="unity-build-title">twq-master</div>
       </div>
     </div>
+
+    <button onclick="copyReferralLink()">نسخ رابط الإحالة</button>
+
     <script>
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
@@ -31,12 +34,6 @@
       var fullscreenButton = document.querySelector("#unity-fullscreen-button");
       var warningBanner = document.querySelector("#unity-warning");
 
-      // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error'.
-      // If type=='warning', a yellow highlight color is used.
-      // Modify or remove this function to customize the visually presented
-      // way that non-critical warnings and error messages are presented to the
-      // user.
       function unityShowBanner(msg, type) {
         function updateBannerVisibility() {
           warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
@@ -68,25 +65,7 @@
         showBanner: unityShowBanner,
       };
 
-      // By default, Unity keeps WebGL canvas render target size matched with
-      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
-      // Set this to false if you want to decouple this synchronization from
-      // happening inside the engine, and you would instead like to size up
-      // the canvas DOM size and WebGL render target sizes yourself.
-      // config.matchWebGLToCanvasSize = false;
-
-      // If you would like all file writes inside Unity Application.persistentDataPath
-      // directory to automatically persist so that the contents are remembered when
-      // the user revisits the site the next time, uncomment the following line:
-      // config.autoSyncPersistentDataPath = true;
-      // This autosyncing is currently not the default behavior to avoid regressing
-      // existing user projects that might rely on the earlier manual
-      // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
-      // expected to change.
-
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Mobile device style: fill the whole browser client area with the game canvas:
-
         var meta = document.createElement('meta');
         meta.name = 'viewport';
         meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
@@ -94,14 +73,8 @@
         container.className = "unity-mobile";
         canvas.className = "unity-mobile";
 
-        // To lower canvas resolution on mobile devices to gain some
-        // performance, uncomment the following line:
-        // config.devicePixelRatio = 1;
-
         unityShowBanner('WebGL builds are not supported on mobile devices.');
       } else {
-        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
-
         canvas.style.width = "1920px";
         canvas.style.height = "1040px";
       }
@@ -124,6 +97,46 @@
         });
       };
       document.body.appendChild(script);
+
+      // 🔹 وظيفة نسخ رابط الإحالة
+      function copyReferralLink() {
+          const userID = "USER123"; // استبدل هذا بالمعرف الفعلي للمستخدم
+          const referralLink = `https://yourgame.com/?ref=${userID}`;
+          
+          navigator.clipboard.writeText(referralLink).then(() => {
+              alert("تم نسخ رابط الإحالة! شاركه مع أصدقائك.");
+          });
+      }
+
+      // 🔹 التقاط معرف الإحالة عند دخول المستخدم الجديد
+      function getReferralId() {
+          const urlParams = new URLSearchParams(window.location.search);
+          return urlParams.get('ref');
+      }
+
+      const referrerId = getReferralId();
+      if (referrerId) {
+          localStorage.setItem("referrer", referrerId);
+      }
+
+      // 🔹 احتساب النقاط عند تسجيل اللاعب الجديد
+      function rewardReferrer() {
+          const referrerId = localStorage.getItem("referrer");
+
+          if (referrerId) {
+              fetch("https://yourgame.com/api/reward", {
+                  method: "POST",
+                  body: JSON.stringify({ referrer: referrerId }),
+                  headers: { "Content-Type": "application/json" }
+              })
+              .then(response => response.json())
+              .then(data => {
+                  console.log("Referral reward added:", data);
+                  localStorage.removeItem("referrer"); // منع احتساب النقاط أكثر من مرة
+              })
+              .catch(error => console.error("Error rewarding referrer:", error));
+          }
+      }
     </script>
   </body>
 </html>
