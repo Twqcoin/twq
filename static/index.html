@@ -45,7 +45,7 @@
         // Function to start mining and call API
         function startMining() {
             console.log("Starting mining...");
-            fetch("http://localhost:5000/start-mining", {
+            fetch("https://your-app-name.onrender.com/start-mining", {  // Update to Render's URL
                 method: "POST",
                 body: JSON.stringify({ userId: "USER123" }),  // Example user ID
                 headers: {
