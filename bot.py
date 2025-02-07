@@ -36,7 +36,7 @@ def get_db_connection():
 
 # تعريف الأمر /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton("Play Game", web_app={"url": "https://your-app-name.onrender.com"})]]
+    keyboard = [[InlineKeyboardButton("Play Game", web_app={"url": "https://twq-xzy4.onrender.com"})]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("مرحبًا! اضغط على الزر أدناه للعب:", reply_markup=reply_markup)
 
@@ -47,7 +47,7 @@ async def start_mining(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user_id = context.args[0]
     try:
-        response = requests.post("https://your-app-name.onrender.com/start-mining", json={"userId": user_id})
+        response = requests.post("https://twq-xzy4.onrender.com/start-mining", json={"userId": user_id})
         if response.status_code == 200:
             await update.message.reply_text("تم بدء التعدين بنجاح!")
         else:
