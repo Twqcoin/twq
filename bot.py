@@ -37,50 +37,19 @@ def get_db_connection():
 
 # تعريف الأمر /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton("Play Game", web_app={"url": "https://twq-xzy4.onrender.com"})]]
+    user = update.effective_user
+    user_data = {
+        "id": user.id,
+        "name": user.full_name,
+        "username": user.username if user.username else "",
+        "photo": f"https://t.me/i/userpic/{user.id}.jpg"  # تقريبًا، يتطلب تأكيد الرابط
+    }
+    
+    game_url = f"https://twq-xzy4.onrender.com?user_id={user_data['id']}&name={user_data['name']}&username={user_data['username']}&photo={user_data['photo']}"
+    keyboard = [[InlineKeyboardButton("Play Game", web_app={"url": game_url})]]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    
     await update.message.reply_text("مرحبًا! اضغط على الزر أدناه للعب:", reply_markup=reply_markup)
-
-# تعريف أمر لبدء التعدين
-async def start_mining(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("الاستخدام: /start_mining <userId>")
-        return
-    user_id = context.args[0]
-
-    # إضافة أو تحديث التقدم في قاعدة البيانات
-    try:
-        conn = get_db_connection()
-        if conn:
-            with conn.cursor() as cursor:
-                cursor.execute("UPDATE players SET progress = progress + 1 WHERE name = %s", (user_id,))
-                conn.commit()
-            conn.close()
-
-        response = requests.post("https://twq-xzy4.onrender.com/start-mining", json={"userId": user_id})
-        if response.status_code == 200:
-            await update.message.reply_text("تم بدء التعدين بنجاح!")
-        else:
-            await update.message.reply_text("حدث خطأ أثناء بدء التعدين.")
-    except Exception as e:
-        logger.error(f"خطأ في الاتصال بـ API أو قاعدة البيانات: {e}")
-        await update.message.reply_text("حدث خطأ أثناء الاتصال بـ API أو قاعدة البيانات.")
-
-# تعريف أمر لإضافة إحالة
-async def add_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("الاستخدام: /add_referral <userId>")
-        return
-    user_id = context.args[0]
-    try:
-        response = requests.post("https://twq-xzy4.onrender.com/add-referral", json={"userId": user_id})
-        if response.status_code == 200:
-            await update.message.reply_text("تم إضافة الإحالة بنجاح!")
-        else:
-            await update.message.reply_text("حدث خطأ أثناء إضافة الإحالة.")
-    except Exception as e:
-        logger.error(f"خطأ في الاتصال بـ API: {e}")
-        await update.message.reply_text("حدث خطأ أثناء الاتصال بـ API.")
 
 # تشغيل البوت
 def main():
@@ -91,8 +60,6 @@ def main():
 
     application = ApplicationBuilder().token(token).build()
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("start_mining", start_mining))
-    application.add_handler(CommandHandler("add_referral", add_referral))
     application.run_polling()
 
 if __name__ == "__main__":
