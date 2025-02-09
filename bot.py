@@ -60,30 +60,22 @@ def set_webhook():
     if response.status_code == 200:
         logger.info("تم إعداد Webhook بنجاح!")
     else:
-        logger.error("فشل في إعداد Webhook")
+        logger.error("فشل إعداد Webhook")
 
-# حذف Webhook القديم (إذا كان موجودًا)
-def delete_webhook():
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    url = f"https://api.telegram.org/bot{bot_token}/deleteWebhook"
-    response = requests.post(url)
-    if response.status_code == 200:
-        logger.info("تم حذف Webhook القديم بنجاح!")
-    else:
-        logger.error("فشل في حذف Webhook القديم")
-
-# تشغيل البوت باستخدام Webhook فقط
+# تشغيل البوت
 def main():
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
         logger.error("لم يتم العثور على رمز البوت في المتغيرات البيئية.")
         return
 
-    # حذف Webhook القديم إذا كان موجودًا
-    delete_webhook()
-
     # تعيين Webhook عند بدء التطبيق
     set_webhook()
+
+    # لا تستخدم polling هنا بعد تعيين Webhook
+    application = ApplicationBuilder().token(token).build()
+    application.add_handler(CommandHandler("start", start))
+    # لا نستخدم application.run_polling() هنا لأننا نستخدم Webhook فقط
 
 if __name__ == "__main__":
     main()
