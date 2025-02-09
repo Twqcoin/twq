@@ -4,29 +4,29 @@ from dotenv import load_dotenv
 import psycopg2
 from urllib.parse import urlparse
 import logging
-import requests  # إضافة مكتبة requests لإعداد Webhook
-import telegram  # إضافة مكتبة التليجرام
+import requests  # Adding requests library for Webhook setup
+import telegram  # Adding telegram library for bot integration
 
-# تحميل المتغيرات البيئية
+# Load environment variables
 load_dotenv()
 
-# إعداد تسجيل الأخطاء
+# Setup logging for error tracking
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__, static_folder='static')  # تعريف مجلد static لتخزين ملفات Unity
+app = Flask(__name__, static_folder='static')  # Define static folder for Unity files
 
-# إعداد اتصال بقاعدة بيانات PostgreSQL
+# Database connection setup
 def get_db_connection():
     """
-    إنشاء اتصال بقاعدة البيانات باستخدام DATABASE_URL من المتغيرات البيئية.
+    Creates a connection to the PostgreSQL database using DATABASE_URL from environment variables.
     """
     try:
         database_url = os.getenv("DATABASE_URL")
         if not database_url:
-            logger.error("DATABASE_URL غير موجود في المتغيرات البيئية.")
+            logger.error("DATABASE_URL is missing in the environment variables.")
             return None
 
         result = urlparse(database_url)
@@ -39,13 +39,13 @@ def get_db_connection():
         )
         return conn
     except Exception as e:
-        logger.error(f"فشل الاتصال بقاعدة البيانات: {e}", exc_info=True)
+        logger.error(f"Failed to connect to the database: {e}", exc_info=True)
         return None
 
-# إنشاء قاعدة البيانات (إذا لم تكن موجودة)
+# Database table creation (if not exists)
 def create_db():
     """
-    إنشاء جدول players إذا لم يكن موجودًا.
+    Creates the 'players' table if it doesn't exist.
     """
     try:
         conn = get_db_connection()
@@ -59,31 +59,31 @@ def create_db():
                                 progress INTEGER DEFAULT 0)''')
             conn.commit()
     except Exception as e:
-        logger.error(f"حدث خطأ أثناء إنشاء الجدول: {e}", exc_info=True)
+        logger.error(f"Error creating table: {e}", exc_info=True)
     finally:
         if conn:
             conn.close()
 
-# إضافة نقطة النهاية الخاصة بالـ Webhook
+# Webhook route to receive messages from Telegram users
 @app.route('/webhook', methods=['POST'])
 def webhook():
     """
-    هذه النقطة تستقبل الرسائل من تيليجرام عند إرسال المستخدمين لها.
+    This endpoint receives messages from Telegram when users send messages to the bot.
     """
     data = request.get_json()
     logger.info(f"Received data: {data}")
 
     try:
-        # الحصول على معلمات المستخدم من البيانات الواردة
+        # Extract user parameters from incoming data
         user_id = data['message']['from']['id']
-        name = data['message']['from'].get('first_name', 'Unknown')  # اسم المستخدم (إذا كان موجودًا)
-        username = data['message']['from'].get('username', 'Unknown')  # اسم المستخدم في تليجرام (إذا كان موجودًا)
-        photo = data['message'].get('photo', None)  # صورة المستخدم (إذا كانت موجودة)
+        name = data['message']['from'].get('first_name', 'Unknown')  # User's first name (if available)
+        username = data['message']['from'].get('username', 'Unknown')  # User's Telegram username (if available)
+        photo = data['message'].get('photo', None)  # User's profile photo (if available)
 
-        # تسجيل البيانات في السجل
+        # Log the received data
         logger.info(f"User ID: {user_id}, Name: {name}, Username: {username}, Photo: {photo}")
 
-        # إرجاع البيانات لتأكيد استلامها
+        # Return received data as confirmation
         return jsonify({
             "status": "success",
             "user_id": user_id,
@@ -99,24 +99,24 @@ def webhook():
         logger.error(f"An error occurred: {e}", exc_info=True)
         return jsonify({"error": "An error occurred while processing the data."}), 500
 
-# إرسال معلومات اللاعب
+# Function to send player information to Telegram
 def send_player_info(player_name, player_image_url, chat_id):
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
     bot = telegram.Bot(token=bot_token)
     
-    # إرسال صورة واسم اللاعب
+    # Send player image and name
     bot.send_photo(chat_id=chat_id, photo=player_image_url, caption=f"Player: {player_name}")
 
-# إرسال رسالة
+# Function to send a message to a user on Telegram
 def send_message(chat_id, text):
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
     bot = telegram.Bot(token=bot_token)
     bot.send_message(chat_id=chat_id, text=text)
 
-# إعداد Webhook للبوت عند بدء التشغيل
+# Set up the Webhook for the bot at startup
 def set_webhook():
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")  # استبدل بمفتاح البوت الخاص بك
-    webhook_url = os.getenv("WEBHOOK_URL")  # تحديد الرابط الخاص بالـ Webhook
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")  # Replace with your bot token
+    webhook_url = os.getenv("WEBHOOK_URL")  # Set the Webhook URL here
     url = f"https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}/webhook"
     response = requests.post(url)
     if response.status_code == 200:
@@ -124,7 +124,7 @@ def set_webhook():
     else:
         logger.error(f"Failed to set webhook: {response.text}")
 
-# استرجاع صورة اللاعب من قاعدة البيانات
+# Function to retrieve a player's image URL from the database
 def get_player_image_url(player_name):
     try:
         conn = get_db_connection()
@@ -135,58 +135,58 @@ def get_player_image_url(player_name):
             result = cursor.fetchone()
             return result[0] if result else None
     except Exception as e:
-        logger.error(f"حدث خطأ أثناء استرجاع صورة اللاعب: {e}", exc_info=True)
+        logger.error(f"Error retrieving player image: {e}", exc_info=True)
         return None
     finally:
         if conn:
             conn.close()
 
-# إضافة لاعب إلى قاعدة البيانات
+# Route to add a new player to the database
 @app.route('/add_player', methods=['POST'])
 def add_player():
     data = request.get_json()
     if 'name' not in data or 'image_url' not in data:
-        return jsonify({"error": "الاسم ورابط الصورة مطلوبان."}), 400
+        return jsonify({"error": "Name and image URL are required."}), 400
     player_name = data['name']
     player_image_url = data['image_url']
     
     try:
         conn = get_db_connection()
         if conn is None:
-            return jsonify({"error": "فشل الاتصال بقاعدة البيانات."}), 500
+            return jsonify({"error": "Failed to connect to the database."}), 500
         with conn.cursor() as cursor:
             cursor.execute("INSERT INTO players (name, image_url, progress) VALUES (%s, %s, %s)", 
                            (player_name, player_image_url, 0))
             conn.commit()
-        return jsonify({"message": f"تم إضافة اللاعب {player_name} بنجاح!"}), 201
+        return jsonify({"message": f"Player {player_name} added successfully!"}), 201
     except Exception as e:
-        logger.error(f"حدث خطأ أثناء إضافة اللاعب: {e}", exc_info=True)
-        return jsonify({"error": "حدث خطأ أثناء إضافة اللاعب."}), 500
+        logger.error(f"Error adding player: {e}", exc_info=True)
+        return jsonify({"error": "An error occurred while adding the player."}), 500
     finally:
         if conn:
             conn.close()
 
-# استرجاع بيانات لاعب
+# Route to retrieve a player's data
 @app.route('/get_player/<name>', methods=['GET'])
 def get_player(name):
     player_image_url = get_player_image_url(name)
     if player_image_url is None:
-        return jsonify({"error": "لا يوجد لاعب بهذا الاسم."}), 404
+        return jsonify({"error": "Player not found."}), 404
     return jsonify({"name": name, "image_url": player_image_url}), 200
 
-# استرجاع تقدم لاعب عبر API
+# Route to retrieve player progress
 @app.route('/get_progress', methods=['POST'])
 def get_progress():
     data = request.get_json()
     if 'name' not in data:
-        return jsonify({"error": "الاسم مطلوب."}), 400
+        return jsonify({"error": "Name is required."}), 400
     player_name = data['name']
     progress = get_player_progress(player_name)
     if progress is None:
-        return jsonify({"error": "لا يوجد لاعب بهذا الاسم."}), 404
+        return jsonify({"error": "Player not found."}), 404
     return jsonify({"name": player_name, "progress": progress}), 200
 
-# دالة لاسترجاع تقدم اللاعب
+# Function to retrieve player progress from the database
 def get_player_progress(player_name):
     try:
         conn = get_db_connection()
@@ -197,13 +197,13 @@ def get_player_progress(player_name):
             result = cursor.fetchone()
             return result[0] if result else None
     except Exception as e:
-        logger.error(f"حدث خطأ أثناء استرجاع تقدم اللاعب: {e}", exc_info=True)
+        logger.error(f"Error retrieving player progress: {e}", exc_info=True)
         return None
     finally:
         if conn:
             conn.close()
 
-# بدء التعدين
+# Route to start mining (increase progress)
 @app.route('/start-mining', methods=['POST'])
 def start_mining():
     data = request.get_json()
@@ -226,17 +226,17 @@ def start_mining():
         if conn:
             conn.close()
 
-# فتح تطبيق Unity WebGL بدلاً من رسالة JSON
+# Serve Unity WebGL files
 @app.route('/')
 def index():
-    return redirect(url_for('static', filename='index.html'))  # إعادة توجيه المستخدم إلى Unity
+    return redirect(url_for('static', filename='index.html'))  # Redirect to Unity WebGL index
 
-# تمكين فتح ملفات Unity WebGL مباشرة
+# Enable serving static Unity WebGL files
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     return send_from_directory('static', filename)
 
 if __name__ == '__main__':
     create_db()
-    set_webhook()  # إعداد Webhook عند بدء التطبيق
+    set_webhook()  # Set webhook on startup
     app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
