@@ -74,7 +74,9 @@ def main():
 
     application = ApplicationBuilder().token(token).build()
     application.add_handler(CommandHandler("start", start))
-    application.run_polling()
+
+    # لا تستخدم run_polling مع Webhook. إزالة هذا السطر.
+    # application.run_polling() 
 
 if __name__ == "__main__":
     main()
