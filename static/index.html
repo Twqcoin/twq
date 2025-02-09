@@ -6,6 +6,7 @@
     <title>Unity WebGL Player | twq-master</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
       function FocusInputField() {
         setTimeout(() => {
@@ -15,6 +16,20 @@
             input.setSelectionRange(input.value.length, input.value.length);
           }
         }, 500);
+      }
+      
+      window.onload = function() {
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+        let user = tg.initDataUnsafe.user;
+        if (user) {
+          document.getElementById("username").innerText = user.first_name;
+          if (user.photo_url) {
+            document.getElementById("userphoto").src = user.photo_url;
+          } else {
+            document.getElementById("userphoto").src = "default-avatar.png";
+          }
+        }
       }
     </script>
   </head>
@@ -27,13 +42,19 @@
           <div id="unity-progress-bar-full"></div>
         </div>
       </div>
-      <div id="unity-warning"> </div>
+      <div id="unity-warning"></div>
       <div id="unity-footer">
         <div id="unity-webgl-logo"></div>
         <div id="unity-fullscreen-button"></div>
         <div id="unity-build-title">twq-master</div>
       </div>
     </div>
+    
+    <div id="user-info">
+      <h2>Welcome, <span id="username"></span></h2>
+      <img id="userphoto" src="" alt="User Photo" width="100">
+    </div>
+    
     <script>
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
@@ -99,7 +120,6 @@
             unityInstance.SetFullscreen(1);
           };
           
-          // استدعاء التركيز عند فتح نافذة الإدخال
           window.addEventListener("message", (event) => {
             if (event.data === "FocusInput") {
               FocusInputField();
