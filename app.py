@@ -175,7 +175,7 @@ def get_player(name):
     return jsonify({"name": name, "image_url": player_image_url}), 200
 
 # Route to retrieve player progress
-@app.route('/get_progress', methods=['POST'])
+@app.route('/get_progress', methods=['POST'])  # Changed method to POST
 def get_progress():
     data = request.get_json()
     if 'name' not in data:
