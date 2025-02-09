@@ -120,9 +120,9 @@ def get_player_progress(player_name):
         if conn:
             conn.close()
 
-# Route to retrieve player progress
-@app.route('/get_progress', methods=['POST'])  # Changed method to POST
+@app.route('/get_progress', methods=['POST'])
 def get_progress():
+    print("Reached get_progress route")  # سيتم طباعة هذه الرسالة إذا تم الوصول إلى هذه الـ route
     data = request.get_json()
     if 'name' not in data:
         return jsonify({"error": "Name is required."}), 400
@@ -131,6 +131,7 @@ def get_progress():
     if progress is None:
         return jsonify({"error": "Player not found."}), 404
     return jsonify({"name": player_name, "progress": progress}), 200
+
 
 # Route to start mining (increase progress)
 @app.route('/start-mining', methods=['POST'])
