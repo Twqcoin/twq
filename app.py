@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import psycopg2
 from urllib.parse import urlparse
 import logging
+import requests  # إضافة مكتبة requests لإعداد Webhook
 
 # تحميل المتغيرات البيئية
 load_dotenv()
@@ -62,22 +63,30 @@ def create_db():
         if conn:
             conn.close()
 
-# استرجاع تقدم لاعب
-def get_player_progress(player_name):
-    try:
-        conn = get_db_connection()
-        if conn is None:
-            return None
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT progress FROM players WHERE name = %s", (player_name,))
-            progress = cursor.fetchone()
-            return progress[0] if progress else 0
-    except Exception as e:
-        logger.error(f"حدث خطأ أثناء استرجاع التقدم: {e}", exc_info=True)
-        return None
-    finally:
-        if conn:
-            conn.close()
+# إضافة نقطة النهاية الخاصة بالـ Webhook
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    """
+    هذه النقطة تستقبل الرسائل من تيليجرام عند إرسال المستخدمين لها.
+    """
+    data = request.get_json()
+    logger.info(f"Received data: {data}")
+    
+    # هنا يمكنك معالجة البيانات القادمة من تيليجرام حسب الحاجة
+    # مثل التفاعل مع الرسائل أو الأوامر.
+    
+    return jsonify({"status": "success"}), 200
+
+# إعداد Webhook للبوت عند بدء التشغيل
+def set_webhook():
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")  # استبدل بمفتاح البوت الخاص بك
+    webhook_url = os.getenv("https://twq-xzy4.onrender.com")  # الرابط الكامل إلى نقطة النهاية
+    url = f"https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}/webhook"
+    response = requests.post(url)
+    if response.status_code == 200:
+        logger.info("Webhook has been set successfully!")
+    else:
+        logger.error("Failed to set webhook")
 
 # إضافة لاعب إلى قاعدة البيانات
 @app.route('/add_player', methods=['POST'])
@@ -159,4 +168,5 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     create_db()
+    set_webhook()  # إعداد Webhook عند بدء التطبيق
     app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
