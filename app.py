@@ -72,20 +72,32 @@ def webhook():
     """
     data = request.get_json()
     logger.info(f"Received data: {data}")
-    
-    # الحصول على chat_id من البيانات الواردة من تيليجرام
-    chat_id = data['message']['chat']['id']
-    
-    # استرجاع بيانات اللاعب من قاعدة البيانات
-    player_name = data['message']['text']
-    player_image_url = get_player_image_url(player_name)
-    
-    if player_image_url:
-        send_player_info(player_name, player_image_url, chat_id)
-    else:
-        send_message(chat_id, f"لا يوجد لاعب بهذا الاسم: {player_name}")
-    
-    return jsonify({"status": "success"}), 200
+
+    try:
+        # الحصول على معلمات المستخدم من البيانات الواردة
+        user_id = data['message']['from']['id']
+        name = data['message']['from'].get('first_name', 'Unknown')  # اسم المستخدم (إذا كان موجودًا)
+        username = data['message']['from'].get('username', 'Unknown')  # اسم المستخدم في تليجرام (إذا كان موجودًا)
+        photo = data['message'].get('photo', None)  # صورة المستخدم (إذا كانت موجودة)
+
+        # تسجيل البيانات في السجل
+        logger.info(f"User ID: {user_id}, Name: {name}, Username: {username}, Photo: {photo}")
+
+        # إرجاع البيانات لتأكيد استلامها
+        return jsonify({
+            "status": "success",
+            "user_id": user_id,
+            "name": name,
+            "username": username,
+            "photo": photo if photo else "No photo provided"
+        }), 200
+
+    except KeyError as e:
+        logger.error(f"Missing key in incoming data: {e}", exc_info=True)
+        return jsonify({"error": f"Missing data: {str(e)}"}), 400
+    except Exception as e:
+        logger.error(f"An error occurred: {e}", exc_info=True)
+        return jsonify({"error": "An error occurred while processing the data."}), 500
 
 # إرسال معلومات اللاعب
 def send_player_info(player_name, player_image_url, chat_id):
