@@ -46,7 +46,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # استرجاع صورة البروفايل باستخدام API
     try:
-        user_profile_photos = await update.effective_chat.get_user_profile_photos(user.id)
+        user_profile_photos = await update.effective_user.get_profile_photos()
         if user_profile_photos.total_count > 0:
             # استخدام أول صورة تم العثور عليها
             photo_url = f"https://t.me/i/userpic/{user.id}_{user_profile_photos.photos[0][-1].file_id}.jpg"
