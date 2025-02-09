@@ -163,7 +163,8 @@ def index():
 # Enable serving static Unity WebGL files
 @app.route('/static/<path:filename>')
 def serve_static(filename):
-    return send_from_directory('static', filename)
+    # Ensure the correct path for static files in production
+    return send_from_directory(os.path.join(app.root_path, 'static'), filename)
 
 if __name__ == '__main__':
     create_db()
