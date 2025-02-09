@@ -8,6 +8,9 @@
     <link rel="stylesheet" href="TemplateData/style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
+      // تحديد رابط السيرفر
+      const serverUrl = "https://your-app-name.onrender.com";  // استبدل هذا بالرابط الفعلي
+
       function FocusInputField() {
         setTimeout(() => {
           let input = document.querySelector("input");
@@ -28,7 +31,7 @@
           document.getElementById("userphoto").src = user.photo_url || "default-avatar.png";
           
           // جلب تقدم اللاعب من API
-          fetch("/get_progress", {
+          fetch(`${serverUrl}/get_progress`, {  // استخدم الرابط من المتغير
             method: "POST",
             headers: {
               "Content-Type": "application/json"
