@@ -5,6 +5,7 @@ import psycopg2
 from urllib.parse import urlparse
 import logging
 import requests  # إضافة مكتبة requests لإعداد Webhook
+import telegram  # إضافة مكتبة التليجرام
 
 # تحميل المتغيرات البيئية
 load_dotenv()
@@ -72,21 +73,61 @@ def webhook():
     data = request.get_json()
     logger.info(f"Received data: {data}")
     
-    # هنا يمكنك معالجة البيانات القادمة من تيليجرام حسب الحاجة
-    # مثل التفاعل مع الرسائل أو الأوامر.
+    # الحصول على chat_id من البيانات الواردة من تيليجرام
+    chat_id = data['message']['chat']['id']
+    
+    # استرجاع بيانات اللاعب من قاعدة البيانات
+    player_name = data['message']['text']
+    player_image_url = get_player_image_url(player_name)
+    
+    if player_image_url:
+        send_player_info(player_name, player_image_url, chat_id)
+    else:
+        send_message(chat_id, f"لا يوجد لاعب بهذا الاسم: {player_name}")
     
     return jsonify({"status": "success"}), 200
+
+# إرسال معلومات اللاعب
+def send_player_info(player_name, player_image_url, chat_id):
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    bot = telegram.Bot(token=bot_token)
+    
+    # إرسال صورة واسم اللاعب
+    bot.send_photo(chat_id=chat_id, photo=player_image_url, caption=f"Player: {player_name}")
+
+# إرسال رسالة
+def send_message(chat_id, text):
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    bot = telegram.Bot(token=bot_token)
+    bot.send_message(chat_id=chat_id, text=text)
 
 # إعداد Webhook للبوت عند بدء التشغيل
 def set_webhook():
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")  # استبدل بمفتاح البوت الخاص بك
-    webhook_url = os.getenv("https://twq-xzy4.onrender.com")  # الرابط الكامل إلى نقطة النهاية
+    webhook_url = os.getenv("WEBHOOK_URL")  # تحديد الرابط الخاص بالـ Webhook
     url = f"https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}/webhook"
     response = requests.post(url)
     if response.status_code == 200:
         logger.info("Webhook has been set successfully!")
     else:
-        logger.error("Failed to set webhook")
+        logger.error(f"Failed to set webhook: {response.text}")
+
+# استرجاع صورة اللاعب من قاعدة البيانات
+def get_player_image_url(player_name):
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            return None
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT image_url FROM players WHERE name = %s", (player_name,))
+            result = cursor.fetchone()
+            return result[0] if result else None
+    except Exception as e:
+        logger.error(f"حدث خطأ أثناء استرجاع صورة اللاعب: {e}", exc_info=True)
+        return None
+    finally:
+        if conn:
+            conn.close()
 
 # إضافة لاعب إلى قاعدة البيانات
 @app.route('/add_player', methods=['POST'])
@@ -116,10 +157,10 @@ def add_player():
 # استرجاع بيانات لاعب
 @app.route('/get_player/<name>', methods=['GET'])
 def get_player(name):
-    progress = get_player_progress(name)
-    if progress is None:
+    player_image_url = get_player_image_url(name)
+    if player_image_url is None:
         return jsonify({"error": "لا يوجد لاعب بهذا الاسم."}), 404
-    return jsonify({"name": name, "progress": progress}), 200
+    return jsonify({"name": name, "image_url": player_image_url}), 200
 
 # استرجاع تقدم لاعب عبر API
 @app.route('/get_progress', methods=['POST'])
