@@ -67,29 +67,33 @@ def create_db():
 # Webhook route to receive messages from Telegram users
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    """
-    This endpoint receives messages from Telegram when users send messages to the bot.
-    """
     data = request.get_json()
     logger.info(f"Received data: {data}")
 
     try:
         # Extract user parameters from incoming data
         user_id = data['message']['from']['id']
-        name = data['message']['from'].get('first_name', 'Unknown')  # User's first name (if available)
-        username = data['message']['from'].get('username', 'Unknown')  # User's Telegram username (if available)
+        name = data['message']['from'].get('first_name', 'Unknown')  # User's first name
+        username = data['message']['from'].get('username', 'Unknown')  # User's Telegram username
         photo = data['message'].get('photo', None)  # User's profile photo (if available)
 
         # Log the received data
         logger.info(f"User ID: {user_id}, Name: {name}, Username: {username}, Photo: {photo}")
 
-        # Return received data as confirmation
+        # Store the player information in the database
+        conn = get_db_connection()
+        if conn:
+            with conn.cursor() as cursor:
+                cursor.execute("INSERT INTO players (name, image_url, progress) VALUES (%s, %s, %s)",
+                               (name, photo[0]['file_id'] if photo else "default-avatar.png", 0))
+                conn.commit()
+
         return jsonify({
             "status": "success",
             "user_id": user_id,
             "name": name,
             "username": username,
-            "photo": photo if photo else "No photo provided"
+            "photo": photo[0]['file_id'] if photo else "No photo provided"
         }), 200
 
     except KeyError as e:
@@ -98,93 +102,6 @@ def webhook():
     except Exception as e:
         logger.error(f"An error occurred: {e}", exc_info=True)
         return jsonify({"error": "An error occurred while processing the data."}), 500
-
-# Function to send player information to Telegram
-def send_player_info(player_name, player_image_url, chat_id):
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    bot = telegram.Bot(token=bot_token)
-    
-    # Send player image and name
-    bot.send_photo(chat_id=chat_id, photo=player_image_url, caption=f"Player: {player_name}")
-
-# Function to send a message to a user on Telegram
-def send_message(chat_id, text):
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    bot = telegram.Bot(token=bot_token)
-    bot.send_message(chat_id=chat_id, text=text)
-
-# Set up the Webhook for the bot at startup
-def set_webhook():
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")  # Replace with your bot token
-    webhook_url = os.getenv("WEBHOOK_URL")  # Set the Webhook URL here
-    url = f"https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}/webhook"
-    response = requests.post(url)
-    if response.status_code == 200:
-        logger.info("Webhook has been set successfully!")
-    else:
-        logger.error(f"Failed to set webhook: {response.text}")
-
-# Function to retrieve a player's image URL from the database
-def get_player_image_url(player_name):
-    try:
-        conn = get_db_connection()
-        if conn is None:
-            return None
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT image_url FROM players WHERE name = %s", (player_name,))
-            result = cursor.fetchone()
-            return result[0] if result else None
-    except Exception as e:
-        logger.error(f"Error retrieving player image: {e}", exc_info=True)
-        return None
-    finally:
-        if conn:
-            conn.close()
-
-# Route to add a new player to the database
-@app.route('/add_player', methods=['POST'])
-def add_player():
-    data = request.get_json()
-    if 'name' not in data or 'image_url' not in data:
-        return jsonify({"error": "Name and image URL are required."}), 400
-    player_name = data['name']
-    player_image_url = data['image_url']
-    
-    try:
-        conn = get_db_connection()
-        if conn is None:
-            return jsonify({"error": "Failed to connect to the database."}), 500
-        with conn.cursor() as cursor:
-            cursor.execute("INSERT INTO players (name, image_url, progress) VALUES (%s, %s, %s)", 
-                           (player_name, player_image_url, 0))
-            conn.commit()
-        return jsonify({"message": f"Player {player_name} added successfully!"}), 201
-    except Exception as e:
-        logger.error(f"Error adding player: {e}", exc_info=True)
-        return jsonify({"error": "An error occurred while adding the player."}), 500
-    finally:
-        if conn:
-            conn.close()
-
-# Route to retrieve a player's data
-@app.route('/get_player/<name>', methods=['GET'])
-def get_player(name):
-    player_image_url = get_player_image_url(name)
-    if player_image_url is None:
-        return jsonify({"error": "Player not found."}), 404
-    return jsonify({"name": name, "image_url": player_image_url}), 200
-
-# Route to retrieve player progress
-@app.route('/get_progress', methods=['POST'])  # Changed method to POST
-def get_progress():
-    data = request.get_json()
-    if 'name' not in data:
-        return jsonify({"error": "Name is required."}), 400
-    player_name = data['name']
-    progress = get_player_progress(player_name)
-    if progress is None:
-        return jsonify({"error": "Player not found."}), 404
-    return jsonify({"name": player_name, "progress": progress}), 200
 
 # Function to retrieve player progress from the database
 def get_player_progress(player_name):
@@ -202,6 +119,18 @@ def get_player_progress(player_name):
     finally:
         if conn:
             conn.close()
+
+# Route to retrieve player progress
+@app.route('/get_progress', methods=['POST'])  # Changed method to POST
+def get_progress():
+    data = request.get_json()
+    if 'name' not in data:
+        return jsonify({"error": "Name is required."}), 400
+    player_name = data['name']
+    progress = get_player_progress(player_name)
+    if progress is None:
+        return jsonify({"error": "Player not found."}), 404
+    return jsonify({"name": player_name, "progress": progress}), 200
 
 # Route to start mining (increase progress)
 @app.route('/start-mining', methods=['POST'])
@@ -238,5 +167,4 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     create_db()
-    set_webhook()  # Set webhook on startup
     app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
