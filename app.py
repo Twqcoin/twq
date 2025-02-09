@@ -174,6 +174,23 @@ def get_progress():
         return jsonify({"error": "لا يوجد لاعب بهذا الاسم."}), 404
     return jsonify({"name": player_name, "progress": progress}), 200
 
+# دالة لاسترجاع تقدم اللاعب
+def get_player_progress(player_name):
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            return None
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT progress FROM players WHERE name = %s", (player_name,))
+            result = cursor.fetchone()
+            return result[0] if result else None
+    except Exception as e:
+        logger.error(f"حدث خطأ أثناء استرجاع تقدم اللاعب: {e}", exc_info=True)
+        return None
+    finally:
+        if conn:
+            conn.close()
+
 # بدء التعدين
 @app.route('/start-mining', methods=['POST'])
 def start_mining():
