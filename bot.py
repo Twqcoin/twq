@@ -41,14 +41,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_data = {
         "id": user.id,
         "name": user.full_name,
-        "username": user.username if user.username else "",
+        "username": user.username if user.username else "لا يوجد اسم مستخدم",
         "photo": f"https://t.me/i/userpic/{user.id}.jpg"
     }
-    
+
+    # طباعة بيانات اللاعب للتحقق
+    logger.info(f"البيانات المستلمة من اللاعب: {user_data}")
+
+    # بناء رابط اللعبة
     game_url = f"https://twq-xzy4.onrender.com?user_id={user_data['id']}&name={user_data['name']}&username={user_data['username']}&photo={user_data['photo']}"
+    
+    # إعداد الزر الذي يحتوي على رابط اللعبة
     keyboard = [[InlineKeyboardButton("Play Game", web_app={"url": game_url})]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
+    # إرسال رسالة الترحيب مع رابط اللعبة
     await update.message.reply_text("مرحبًا! اضغط على الزر أدناه للعب:", reply_markup=reply_markup)
 
 # إعداد Webhook للبوت
