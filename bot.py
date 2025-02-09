@@ -42,9 +42,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "id": user.id,
         "name": user.full_name,
         "username": user.username if user.username else "لا يوجد اسم مستخدم",
-        "photo": f"https://t.me/i/userpic/{user.id}.jpg"
     }
 
+    # استرجاع صورة البروفايل باستخدام API
+    try:
+        user_profile_photos = await update.effective_chat.get_user_profile_photos(user.id)
+        if user_profile_photos.total_count > 0:
+            # استخدام أول صورة تم العثور عليها
+            photo_url = f"https://t.me/i/userpic/{user.id}_{user_profile_photos.photos[0][-1].file_id}.jpg"
+        else:
+            photo_url = "https://example.com/default_avatar.jpg"  # صورة افتراضية إذا لم تكن هناك صورة
+    except Exception as e:
+        logger.error(f"فشل في جلب صورة المستخدم: {e}")
+        photo_url = "https://example.com/default_avatar.jpg"  # صورة افتراضية إذا حدث خطأ
+
+    user_data["photo"] = photo_url
+    
     # طباعة بيانات اللاعب للتحقق
     logger.info(f"البيانات المستلمة من اللاعب: {user_data}")
 
