@@ -42,7 +42,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "id": user.id,
         "name": user.full_name,
         "username": user.username if user.username else "",
-        "photo": f"https://t.me/i/userpic/{user.id}.jpg"  # تقريبًا، يتطلب تأكيد الرابط
+        "photo": f"https://t.me/i/userpic/{user.id}.jpg"
     }
     
     game_url = f"https://twq-xzy4.onrender.com?user_id={user_data['id']}&name={user_data['name']}&username={user_data['username']}&photo={user_data['photo']}"
@@ -60,7 +60,14 @@ def set_webhook():
     if response.status_code == 200:
         logger.info("تم إعداد Webhook بنجاح!")
     else:
-        logger.error("فشل إعداد Webhook")
+        logger.error("فشل في إعداد Webhook")
+
+# الحصول على معلومات Webhook
+def get_webhook_info():
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    url = f"https://api.telegram.org/bot{bot_token}/getWebhookInfo"
+    response = requests.get(url)
+    logger.info(response.json())
 
 # تشغيل البوت
 def main():
@@ -72,10 +79,12 @@ def main():
     # تعيين Webhook عند بدء التطبيق
     set_webhook()
 
-    # لا تستخدم polling هنا بعد تعيين Webhook
+    # التحقق من Webhook الحالي
+    get_webhook_info()
+
     application = ApplicationBuilder().token(token).build()
     application.add_handler(CommandHandler("start", start))
-    # لا نستخدم application.run_polling() هنا لأننا نستخدم Webhook فقط
+    application.run_polling()
 
 if __name__ == "__main__":
     main()
