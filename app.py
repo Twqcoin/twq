@@ -4,13 +4,11 @@ from dotenv import load_dotenv
 import psycopg2
 from urllib.parse import urlparse
 import logging
-import requests
-import telegram
 
-# Load environment variables
+# تحميل المتغيرات البيئية
 load_dotenv()
 
-# Setup logging
+# إعدادات التسجيل (Logging)
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
@@ -18,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__, static_folder='static')
 
+# وظيفة للاتصال بقاعدة البيانات
 def get_db_connection():
     try:
         database_url = os.getenv("DATABASE_URL")
@@ -33,11 +32,13 @@ def get_db_connection():
             host=result.hostname,
             port=result.port or 5432
         )
+        logger.info("Successfully connected to the database.")
         return conn
     except Exception as e:
         logger.error(f"Failed to connect to the database: {e}", exc_info=True)
         return None
 
+# وظيفة لإنشاء الجدول في قاعدة البيانات
 def create_db():
     try:
         conn = get_db_connection()
@@ -56,6 +57,7 @@ def create_db():
         if conn:
             conn.close()
 
+# مسار لمعالجة الويب هوك (Webhook)
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.get_json()
@@ -84,6 +86,7 @@ def webhook():
         logger.error(f"An error occurred: {e}", exc_info=True)
         return jsonify({"error": "An error occurred while processing the data."}), 500
 
+# وظيفة للحصول على تقدم اللاعب
 def get_player_progress(player_name):
     try:
         conn = get_db_connection()
@@ -100,6 +103,7 @@ def get_player_progress(player_name):
         if conn:
             conn.close()
 
+# مسار للحصول على تقدم اللاعب
 @app.route('/get_progress', methods=['POST'])
 def get_progress():
     data = request.get_json()
@@ -111,6 +115,7 @@ def get_progress():
         return jsonify({"error": "Player not found."}), 404
     return jsonify({"name": player_name, "progress": progress}), 200
 
+# مسار لبدء التعدين
 @app.route('/start-mining', methods=['POST'])
 def start_mining():
     data = request.get_json()
@@ -133,14 +138,17 @@ def start_mining():
         if conn:
             conn.close()
 
+# مسار للصفحة الرئيسية
 @app.route('/')
 def index():
     return redirect(url_for('static', filename='index.html'))
 
+# مسار لتقديم الملفات الثابتة
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     return send_from_directory(os.path.join(app.root_path, 'static'), filename)
 
+# تشغيل الخادم
 if __name__ == '__main__':
     create_db()
     app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
