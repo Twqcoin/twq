@@ -51,12 +51,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text("مرحبًا! اضغط على الزر أدناه للعب:", reply_markup=reply_markup)
 
+# إعداد Webhook للبوت
+def set_webhook():
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    webhook_url = os.getenv("WEBHOOK_URL")  # تأكد من أن لديك URL البوت
+    url = f"https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}/webhook"
+    response = requests.post(url)
+    if response.status_code == 200:
+        logger.info("Webhook has been set successfully!")
+    else:
+        logger.error("Failed to set webhook")
+
 # تشغيل البوت
 def main():
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
         logger.error("لم يتم العثور على رمز البوت في المتغيرات البيئية.")
         return
+
+    # تعيين Webhook عند بدء التطبيق
+    set_webhook()
 
     application = ApplicationBuilder().token(token).build()
     application.add_handler(CommandHandler("start", start))
