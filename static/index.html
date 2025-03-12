@@ -9,26 +9,28 @@
     <!-- إضافة Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+      /* تنسيق قسم بيانات المستخدم */
       #user-info {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        z-index: 1000;
-        background: rgba(255, 255, 255, 0.8);
-        padding: 10px;
-        border-radius: 5px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
+        position: absolute; /* لجعله ثابتًا في الشاشة */
+        top: 10px; /* المسافة من الأعلى */
+        left: 10px; /* المسافة من اليسار */
+        z-index: 1000; /* لجعله فوق العناصر الأخرى */
+        background: rgba(255, 255, 255, 0.8); /* خلفية شبه شفافة */
+        padding: 10px; /* تباعد داخلي */
+        border-radius: 5px; /* زوايا مدورة */
+        display: flex; /* لعرض العناصر بجانب بعضها */
+        align-items: center; /* محاذاة العناصر عموديًا */
+        gap: 10px; /* المسافة بين العناصر */
       }
       #user-photo {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
+        width: 40px; /* عرض الصورة */
+        height: 40px; /* ارتفاع الصورة */
+        border-radius: 50%; /* جعل الصورة دائرية */
       }
       #user-name {
-        font-size: 16px;
-        font-weight: bold;
+        font-size: 16px; /* حجم الخط */
+        font-weight: bold; /* سمك الخط */
+        margin: 0; /* إزالة الهوامش الافتراضية */
       }
     </style>
   </head>
