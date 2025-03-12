@@ -6,8 +6,39 @@
     <title>Unity Web Player | twq-master</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
+    <!-- إضافة Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+      #user-info {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.8);
+        padding: 10px;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      #user-photo {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+      }
+      #user-name {
+        font-size: 16px;
+        font-weight: bold;
+      }
+    </style>
   </head>
   <body>
+    <!-- قسم لعرض بيانات المستخدم -->
+    <div id="user-info">
+      <img id="user-photo" src="" alt="صورة المستخدم">
+      <p id="user-name"></p>
+    </div>
+
     <div id="unity-container" class="unity-desktop">
       <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
       <div id="unity-loading-bar">
@@ -24,6 +55,30 @@
       </div>
     </div>
     <script>
+      // قراءة بيانات المستخدم من Telegram
+      function loadUserData() {
+        if (window.Telegram && window.Telegram.WebApp) {
+          const initData = Telegram.WebApp.initDataUnsafe;
+
+          if (initData && initData.user) {
+            const user = initData.user;
+            const userName = user.first_name || "مستخدم غير معروف";
+            const userPhoto = user.photo_url || "https://via.placeholder.com/40";
+
+            // عرض بيانات المستخدم
+            document.getElementById("user-name").innerText = userName;
+            document.getElementById("user-photo").src = userPhoto;
+          } else {
+            console.error("بيانات المستخدم غير متوفرة.");
+          }
+        } else {
+          console.error("Telegram Web App SDK غير متوفر.");
+        }
+      }
+
+      // تحميل بيانات المستخدم عند بدء الصفحة
+      loadUserData();
+
       var canvas = document.querySelector("#unity-canvas");
 
       // Shows a temporary message banner/ribbon for a few seconds, or
