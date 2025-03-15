@@ -6,8 +6,30 @@
     <title>Unity Web Player | twq-master</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
+    <style>
+      /* إضافة تنسيق لعرض بيانات اللاعب */
+      #player-info {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      #player-name {
+        font-size: 20px;
+        font-weight: bold;
+      }
+      #player-photo {
+        border-radius: 50%;
+        margin-top: 10px;
+      }
+    </style>
   </head>
   <body>
+    <!-- قسم لعرض بيانات اللاعب -->
+    <div id="player-info">
+      <p id="player-name"></p>
+      <img id="player-photo" src="" alt="Player Photo" width="100">
+    </div>
+
+    <!-- قسم Unity WebGL -->
     <div id="unity-container" class="unity-desktop">
       <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
       <div id="unity-loading-bar">
@@ -23,7 +45,19 @@
         <div id="unity-build-title">twq-master</div>
       </div>
     </div>
+
     <script>
+      // جلب البيانات من الرابط
+      const urlParams = new URLSearchParams(window.location.search);
+      const userId = urlParams.get('user_id');
+      const name = urlParams.get('name');
+      const username = urlParams.get('username');
+      const photo = urlParams.get('photo');
+
+      // عرض بيانات اللاعب
+      document.getElementById('player-name').innerText = `Player: ${name}`;
+      document.getElementById('player-photo').src = photo;
+
       var canvas = document.querySelector("#unity-canvas");
 
       // Shows a temporary message banner/ribbon for a few seconds, or
