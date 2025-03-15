@@ -152,4 +152,3 @@ def serve_static(filename):
 if __name__ == '__main__':
     create_db()
     app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
-
