@@ -1,5 +1,5 @@
+from flask import Flask, send_from_directory, request, jsonify
 import os
-from flask import Flask, request, jsonify, render_template
 from dotenv import load_dotenv
 import psycopg2
 from urllib.parse import urlparse
@@ -49,6 +49,7 @@ def webhook():
         username = data['message']['from'].get('username', 'Unknown')
         photo = data['message'].get('photo', None)
 
+        # تخزين البيانات في قاعدة البيانات
         conn = get_db_connection()
         if conn:
             with conn.cursor() as cursor:
@@ -62,20 +63,12 @@ def webhook():
             'photo_url': photo[0]['file_id'] if photo else "default-avatar.png"
         }
 
-        return render_template('index.html', player=player_data)
+        # عرض صفحة index.html من static
+        return send_from_directory('static', 'index.html')
 
     except Exception as e:
         logger.error(f"An error occurred: {e}", exc_info=True)
         return jsonify({"error": "An error occurred while processing the data."}), 500
-
-# مسار للحصول على بيانات اللاعب
-@app.route('/get_player_info', methods=['GET'])
-def get_player_info():
-    player_data = {
-        'name': "Player Name",
-        'photo_url': "https://example.com/path/to/photo.png"  # Replace with actual URL
-    }
-    return jsonify(player_data)
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5001)))
