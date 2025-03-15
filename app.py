@@ -62,8 +62,8 @@ def webhook():
             'photo_url': photo[0]['file_id'] if photo else "default-avatar.png"
         }
 
-        # عرض index.html من static مع تمرير البيانات
-        return send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')
+        # عرض index.html من static/templates مع تمرير البيانات
+        return send_from_directory(os.path.join(app.root_path, 'static', 'templates'), 'index.html')
 
     except Exception as e:
         logger.error(f"An error occurred: {e}", exc_info=True)
