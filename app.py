@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, render_template
 from dotenv import load_dotenv
 import psycopg2
 from urllib.parse import urlparse
@@ -38,6 +38,11 @@ def get_db_connection():
         logger.error(f"Failed to connect to the database: {e}", exc_info=True)
         return None
 
+# مسار لعرض الصفحة الرئيسية
+@app.route('/')
+def home():
+    return render_template('index.html')  # تأكد من أن لديك ملف index.html داخل مجلد templates
+
 # مسار لمعالجة الويب هوك (Webhook)
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -62,8 +67,8 @@ def webhook():
             'photo_url': photo[0]['file_id'] if photo else "default-avatar.png"
         }
 
-        # عرض index.html من static/templates مع تمرير البيانات
-        return send_from_directory(os.path.join(app.root_path, 'static', 'templates'), 'index.html')
+        # عرض index.html مع تمرير البيانات
+        return render_template('index.html', player_data=player_data)
 
     except Exception as e:
         logger.error(f"An error occurred: {e}", exc_info=True)
