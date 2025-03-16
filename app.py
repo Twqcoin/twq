@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, send_from_directory, render_template
 from dotenv import load_dotenv
 import psycopg2
 from urllib.parse import urlparse
@@ -14,8 +14,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# إنشاء التطبيق مع تحديد المسار لمجلد القوالب
-app = Flask(__name__, template_folder=os.path.join(os.getcwd(), 'static', 'templates'))
+app = Flask(__name__)
 
 # وظيفة للاتصال بقاعدة البيانات
 def get_db_connection():
@@ -42,7 +41,7 @@ def get_db_connection():
 # مسار لعرض الصفحة الرئيسية
 @app.route('/')
 def home():
-    return render_template('index.html')  # تأكد من أن لديك ملف index.html داخل مجلد static/templates
+    return render_template('index.html')  # تأكد من أن لديك ملف index.html داخل مجلد templates
 
 # مسار لمعالجة الويب هوك (Webhook)
 @app.route('/webhook', methods=['POST'])
