@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory, render_template
+from flask import Flask, request, jsonify, send_from_directory
 from dotenv import load_dotenv
 import psycopg2
 from urllib.parse import urlparse
@@ -68,7 +68,7 @@ def webhook():
         }
 
         # عرض index.html مع تمرير البيانات
-        return render_template('index.html', player_data=player_data)
+        return send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')
 
     except Exception as e:
         logger.error(f"An error occurred: {e}", exc_info=True)
