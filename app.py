@@ -38,10 +38,10 @@ def get_db_connection():
         logger.error(f"Failed to connect to the database: {e}", exc_info=True)
         return None
 
-# مسار لعرض الصفحة الرئيسية
+# مسار لعرض الصفحة الرئيسية من مجلد static
 @app.route('/')
 def home():
-    return render_template('index.html')  # تأكد من أن لديك ملف index.html داخل مجلد templates
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')  # تحميل index.html من مجلد static
 
 # مسار لمعالجة الويب هوك (Webhook)
 @app.route('/webhook', methods=['POST'])
