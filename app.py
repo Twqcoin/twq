@@ -38,10 +38,20 @@ def get_db_connection():
         logger.error(f"Failed to connect to the database: {e}", exc_info=True)
         return None
 
-# مسار لعرض الصفحة الرئيسية من مجلد static
+# مسار لعرض الصفحة الرئيسية من مجلد Build
 @app.route('/')
 def home():
-    return send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')  # تحميل index.html من مجلد static
+    return send_from_directory(os.path.join(app.root_path, 'static', 'Build'), 'index.html')  # تحميل index.html من مجلد Build داخل static
+
+# مسار لتحميل style.css من مجلد TemplateData
+@app.route('/TemplateData/style.css')
+def style():
+    return send_from_directory(os.path.join(app.root_path, 'static', 'TemplateData'), 'style.css')
+
+# مسار لتحميل favicon.ico من مجلد TemplateData
+@app.route('/TemplateData/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static', 'TemplateData'), 'favicon.ico')
 
 # مسار لمعالجة الويب هوك (Webhook)
 @app.route('/webhook', methods=['POST'])
@@ -68,7 +78,7 @@ def webhook():
         }
 
         # عرض index.html مع تمرير البيانات
-        return send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')
+        return send_from_directory(os.path.join(app.root_path, 'static', 'Build'), 'index.html')
 
     except Exception as e:
         logger.error(f"An error occurred: {e}", exc_info=True)
