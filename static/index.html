@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | minqx</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
+    <link rel="shortcut icon" href="static/TemplateData/favicon.ico">
+    <link rel="stylesheet" href="static/TemplateData/style.css">
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
@@ -32,7 +32,11 @@
       var warningBanner = document.querySelector("#unity-warning");
 
       // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error' or 'warning'.
+      // a permanent error message on top of the canvas if type=='error'..
+      // If type=='warning', a yellow highlight color is used.
+      // Modify or remove this function to customize the visually presented
+      // way that non-critical warnings and error messages are presented to the
+      // user.
       function unityShowBanner(msg, type) {
         function updateBannerVisibility() {
           warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
@@ -51,31 +55,33 @@
         updateBannerVisibility();
       }
 
-      // Define build and asset paths
-      var buildUrl = "Build";  // Make sure this matches the path where your Build folder is located
+      var buildUrl = "static/Build";  // تعديل المسار هنا ليصبح في مجلد static/Build
       var loaderUrl = buildUrl + "/static.loader.js";
       var config = {
-        dataUrl: buildUrl + "/static.data.br",    // Ensure these paths are correct
+        dataUrl: buildUrl + "/static.data.br",
         frameworkUrl: buildUrl + "/static.framework.js.br",
         codeUrl: buildUrl + "/static.wasm.br",
-        streamingAssetsUrl: "StreamingAssets",  // Make sure this directory is correctly set up
+        streamingAssetsUrl: "StreamingAssets",  // إذا كان لديك هذا المجلد
         companyName: "DefaultCompany",
         productName: "minqx",
         productVersion: "1.0",
         showBanner: unityShowBanner,
       };
 
-      // Mobile settings (to ensure compatibility)
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // Mobile device style: fill the whole browser client area with the game canvas:
+
         var meta = document.createElement('meta');
         meta.name = 'viewport';
         meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
         document.getElementsByTagName('head')[0].appendChild(meta);
         container.className = "unity-mobile";
         canvas.className = "unity-mobile";
+
         unityShowBanner('WebGL builds are not supported on mobile devices.');
       } else {
-        // Desktop setup
+        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+
         canvas.style.width = "1080px";
         canvas.style.height = "1920px";
       }
