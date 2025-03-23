@@ -38,20 +38,15 @@ def get_db_connection():
         logger.error(f"Failed to connect to the database: {e}", exc_info=True)
         return None
 
-# مسار لعرض الصفحة الرئيسية من مجلد TemplateData
+# مسار لعرض الصفحة الرئيسية من مجلد Build
 @app.route('/')
 def home():
-    return send_from_directory(os.path.join(app.root_path, 'static', 'TemplateData'), 'index.html')  # تحميل index.html من مجلد TemplateData
+    return send_from_directory(os.path.join(app.root_path, 'static', 'Build'), 'index.html')  # تحميل index.html من مجلد Build داخل static
 
-# مسار لتحميل style.css من مجلد Build
-@app.route('/static/Build/css/<path:filename>')
-def serve_css(filename):
-    return send_from_directory(os.path.join(app.root_path, 'static', 'Build', 'css'), filename)
-
-# مسار لتحميل script.js من مجلد Build
-@app.route('/static/Build/js/<path:filename>')
-def serve_js(filename):
-    return send_from_directory(os.path.join(app.root_path, 'static', 'Build', 'js'), filename)
+# مسار لتحميل style.css من مجلد TemplateData
+@app.route('/static/TemplateData/style.css')
+def style():
+    return send_from_directory(os.path.join(app.root_path, 'static', 'TemplateData'), 'style.css')
 
 # مسار لتحميل favicon.ico من مجلد TemplateData
 @app.route('/static/TemplateData/favicon.ico')
@@ -83,7 +78,7 @@ def webhook():
         }
 
         # عرض index.html مع تمرير البيانات
-        return send_from_directory(os.path.join(app.root_path, 'static', 'TemplateData'), 'index.html')
+        return send_from_directory(os.path.join(app.root_path, 'static', 'Build'), 'index.html')
 
     except Exception as e:
         logger.error(f"An error occurred: {e}", exc_info=True)
