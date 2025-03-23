@@ -14,7 +14,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__, static_folder='static')
+app = Flask(__name__)
 
 # وظيفة للاتصال بقاعدة البيانات
 def get_db_connection():
@@ -38,10 +38,15 @@ def get_db_connection():
         logger.error(f"Failed to connect to the database: {e}", exc_info=True)
         return None
 
-# مسار لعرض الصفحة الرئيسية من مجلد Build
+# مسار لعرض الصفحة الرئيسية من مجلد static
 @app.route('/')
 def home():
-    return send_from_directory(os.path.join(app.root_path, 'static', 'Build'), 'index.html')  # تحميل index.html من مجلد Build داخل static
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')
+
+# مسار لتحميل الملفات من مجلد Build
+@app.route('/static/Build/<path:filename>')
+def serve_build_files(filename):
+    return send_from_directory(os.path.join(app.root_path, 'static', 'Build'), filename)
 
 # مسار لتحميل style.css من مجلد TemplateData
 @app.route('/static/TemplateData/style.css')
@@ -78,7 +83,7 @@ def webhook():
         }
 
         # عرض index.html مع تمرير البيانات
-        return send_from_directory(os.path.join(app.root_path, 'static', 'Build'), 'index.html')
+        return send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')
 
     except Exception as e:
         logger.error(f"An error occurred: {e}", exc_info=True)
