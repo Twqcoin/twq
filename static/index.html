@@ -37,11 +37,6 @@
             transform: translateY(0);
         }
 
-        #share-buttons {
-            display: none;
-        }
-
-        /* تنسيقات عرض الاسم والصورة */
         #user-info {
             text-align: center;
             margin-top: 20px;
@@ -83,6 +78,9 @@
         <img id="user-photo" src="" alt="User Photo">
         <h2 id="user-name"></h2>
     </div>
+
+    <!-- زر الاتصال بالمحفظة الموجود في التطبيق -->
+    <button class="game-button" id="connect-wallet">ربط المحفظة</button>
 
     <!-- حقل النص الجديد لتفعيل الكيبورد -->
     <input type="text" id="myInput" placeholder="أدخل نصك هنا">
@@ -197,6 +195,31 @@
         document.getElementById('myInput').addEventListener('focus', function() {
             if (Telegram.WebApp) {
                 Telegram.WebApp.expand();  // توسيع واجهة تلجرام لفتح الكيبورد
+            }
+        });
+
+        // ربط المحفظة باستخدام TON Connect
+        const connectButton = document.getElementById('connect-wallet');
+        connectButton.addEventListener('click', async () => {
+            try {
+                // التحقق من وجود TON Connect
+                if (typeof TonConnect !== 'undefined') {
+                    // اتصل بالمحفظة
+                    const tonConnect = new TonConnect({ project: 'your_project_id' });
+
+                    await tonConnect.connect();
+                    const walletAddress = tonConnect.address;
+                    console.log("تم ربط المحفظة بنجاح، العنوان: ", walletAddress);
+
+                    // هنا يمكنك إرسال العنوان إلى Unity أو استخدامه في التطبيق كما تحتاج
+                    if (window.unityInstance) {
+                        window.unityInstance.SendMessage('GameManager', 'SetWalletAddress', walletAddress);
+                    }
+                } else {
+                    alert('لا يمكن الاتصال بمحفظة TON، تأكد من أنك تستخدم البيئة المناسبة');
+                }
+            } catch (error) {
+                console.error("فشل ربط المحفظة: ", error);
             }
         });
     </script>
