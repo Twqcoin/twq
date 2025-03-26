@@ -59,6 +59,9 @@
         </div>
     </div>
 
+    <!-- حقل النص الجديد لتفعيل الكيبورد -->
+    <input type="text" id="myInput" placeholder="أدخل نصك هنا">
+
     <script>
         var container = document.querySelector("#unity-container");
         var canvas = document.querySelector("#unity-canvas");
@@ -151,6 +154,13 @@
                 if (window.unityInstance) {
                     window.unityInstance.SendMessage('GameManager', 'SetReferralId', refParam);
                 }
+            }
+        });
+
+        // عند تفاعل المستخدم مع حقل النص
+        document.getElementById('myInput').addEventListener('focus', function() {
+            if (Telegram.WebApp) {
+                Telegram.WebApp.expand();  // توسيع واجهة تلجرام لفتح الكيبورد
             }
         });
     </script>
