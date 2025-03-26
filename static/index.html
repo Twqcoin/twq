@@ -36,27 +36,9 @@
         .game-button:active {
             transform: translateY(0);
         }
-        
+
         #share-buttons {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        /* تعديلات للعرض على الموبايل */
-        @media (max-width: 768px) {
-            .game-button {
-                padding: 8px 16px;
-                font-size: 14px;
-            }
-            
-            #share-buttons {
-                bottom: 10px;
-                right: 10px;
-            }
+            display: none;
         }
     </style>
 </head>
@@ -75,16 +57,6 @@
             <div id="unity-fullscreen-button"></div>
             <div id="unity-build-title">لعبتي الرائعة</div>
         </div>
-    </div>
-
-    <!-- منطقة أزرار المشاركة -->
-    <div id="share-buttons">
-        <button id="shareButton" class="game-button">
-            <span>مشاركة عبر التلجرام</span>
-        </button>
-        <button id="copyButton" class="game-button">
-            <span>نسخ رابط اللعبة</span>
-        </button>
     </div>
 
     <script>
@@ -159,43 +131,6 @@
             });
         };
         document.body.appendChild(script);
-
-        // دالة لإنشاء رابط اللاعب
-        function generatePlayerLink(playerId = "default") {
-            const baseGameLink = window.location.href.split('?')[0];
-            return `${baseGameLink}?ref=${playerId}`;
-        }
-
-        // دالة المشاركة عبر التلجرام
-        document.getElementById("shareButton").addEventListener("click", function() {
-            const playerId = "player_" + Math.floor(Math.random() * 10000); // ID مؤقت للعرض
-            const playerLink = generatePlayerLink(playerId);
-            const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(playerLink)}&text=تعالَ العب معي هذه اللعبة الرائعة! 🎮`;
-            window.open(telegramUrl, "_blank");
-            
-            // إرسال الحدث إلى Unity إذا لزم الأمر
-            if (window.unityInstance) {
-                window.unityInstance.SendMessage('ShareManager', 'OnShareSuccess');
-            }
-        });
-
-        // دالة نسخ الرابط
-        document.getElementById("copyButton").addEventListener("click", function() {
-            const playerId = "player_" + Math.floor(Math.random() * 10000); // ID مؤقت للعرض
-            const playerLink = generatePlayerLink(playerId);
-            
-            navigator.clipboard.writeText(playerLink).then(() => {
-                alert("تم نسخ رابط اللعبة بنجاح! يمكنك الآن مشاركته مع أصدقائك.");
-                
-                // إرسال الحدث إلى Unity إذا لزم الأمر
-                if (window.unityInstance) {
-                    window.unityInstance.SendMessage('ShareManager', 'OnCopySuccess');
-                }
-            }).catch(err => {
-                console.error("فشل في نسخ الرابط:", err);
-                alert("حدث خطأ أثناء نسخ الرابط. يرجى المحاولة مرة أخرى.");
-            });
-        });
 
         // دالة لقراءة معاملات URL
         function getUrlParameter(name) {
