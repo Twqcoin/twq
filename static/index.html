@@ -40,6 +40,25 @@
         #share-buttons {
             display: none;
         }
+
+        /* تنسيقات عرض الاسم والصورة */
+        #user-info {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        #user-photo {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+        }
+
+        #user-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -57,6 +76,12 @@
             <div id="unity-fullscreen-button"></div>
             <div id="unity-build-title">لعبتي الرائعة</div>
         </div>
+    </div>
+
+    <!-- مكان لعرض الاسم والصورة -->
+    <div id="user-info">
+        <img id="user-photo" src="" alt="User Photo">
+        <h2 id="user-name"></h2>
     </div>
 
     <!-- حقل النص الجديد لتفعيل الكيبورد -->
@@ -147,6 +172,17 @@
 
         // عند تحميل الصفحة، تحقق إذا كان هناك رابط مشاركة
         window.addEventListener('DOMContentLoaded', (event) => {
+            // قراءة المعلمات من الرابط
+            const userName = getUrlParameter('name');
+            const userPhoto = getUrlParameter('photo');
+            
+            // عرض الاسم والصورة
+            if (userName && userPhoto) {
+                document.getElementById('user-name').textContent = userName;  // عرض الاسم
+                document.getElementById('user-photo').src = userPhoto;        // عرض الصورة
+            }
+
+            // إذا كان هناك رابط إحالة (ref)
             const refParam = getUrlParameter('ref');
             if (refParam) {
                 console.log("تم الدخول عبر رابط مشاركة، معرف اللاعب:", refParam);
