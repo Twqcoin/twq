@@ -23,6 +23,13 @@
         <div id="unity-build-title">minqx</div>
       </div>
     </div>
+
+    <!-- زر المشاركة -->
+    <button id="shareButton" style="position: absolute; top: 20px; right: 20px; z-index: 1000; padding: 10px 20px; font-size: 16px;">Share</button>
+
+    <!-- زر نسخ الرابط -->
+    <button id="copyButton" style="position: absolute; top: 60px; right: 20px; z-index: 1000; padding: 10px 20px; font-size: 16px;">Copy Link</button>
+
     <script>
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
@@ -31,12 +38,6 @@
       var fullscreenButton = document.querySelector("#unity-fullscreen-button");
       var warningBanner = document.querySelector("#unity-warning");
 
-      // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error'..
-      // If type=='warning', a yellow highlight color is used.
-      // Modify or remove this function to customize the visually presented
-      // way that non-critical warnings and error messages are presented to the
-      // user.
       function unityShowBanner(msg, type) {
         function updateBannerVisibility() {
           warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
@@ -55,13 +56,13 @@
         updateBannerVisibility();
       }
 
-      var buildUrl = "static/Build";  // تعديل المسار هنا ليصبح في مجلد static/Build
+      var buildUrl = "static/Build";  
       var loaderUrl = buildUrl + "/static.loader.js";
       var config = {
         dataUrl: buildUrl + "/static.data.br",
         frameworkUrl: buildUrl + "/static.framework.js.br",
         codeUrl: buildUrl + "/static.wasm.br",
-        streamingAssetsUrl: "StreamingAssets",  // إذا كان لديك هذا المجلد
+        streamingAssetsUrl: "StreamingAssets",
         companyName: "DefaultCompany",
         productName: "minqx",
         productVersion: "1.0",
@@ -69,8 +70,6 @@
       };
 
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Mobile device style: fill the whole browser client area with the game canvas:
-
         var meta = document.createElement('meta');
         meta.name = 'viewport';
         meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
@@ -80,8 +79,6 @@
 
         unityShowBanner('WebGL builds are not supported on mobile devices.');
       } else {
-        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
-
         canvas.style.width = "1080px";
         canvas.style.height = "1920px";
       }
@@ -103,6 +100,26 @@
         });
       };
       document.body.appendChild(script);
+
+      // الرابط الخاص باللاعب
+      const baseGameLink = "https://your-game-link.com";
+      const playerId = "player123"; // استبدل هذا بمعرف اللاعب الديناميكي إذا كان موجودًا
+      const playerLink = `${baseGameLink}?ref=${playerId}`;
+
+      // كود زر المشاركة
+      document.getElementById("shareButton").addEventListener("click", function () {
+        const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(playerLink)}&text=Join me in this awesome game!`;
+        window.open(telegramShareUrl, "_blank");
+      });
+
+      // كود زر نسخ الرابط
+      document.getElementById("copyButton").addEventListener("click", function () {
+        navigator.clipboard.writeText(playerLink).then(() => {
+          alert("Link copied to clipboard!");
+        }).catch(err => {
+          console.error("Failed to copy the link: ", err);
+        });
+      });
     </script>
   </body>
 </html>
