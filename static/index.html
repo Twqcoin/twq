@@ -4,8 +4,10 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | minqx</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
+    <link rel="shortcut icon" href="static/TemplateData/favicon.ico"> <!-- مسار favicon -->
+    <link rel="stylesheet" href="static/TemplateData/style.css"> <!-- مسار CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tonconnect/sdk"></script> <!-- مكتبة TON -->
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
@@ -24,6 +26,33 @@
       </div>
     </div>
     <script>
+      // اتصال بالمحفظة باستخدام Web3.js
+      let web3;
+      if (typeof window.ethereum !== 'undefined') {
+        web3 = new Web3(window.ethereum);
+        console.log("Ethereum wallet detected");
+
+        // طلب إذن من المستخدم
+        ethereum.request({ method: 'eth_requestAccounts' })
+          .then(accounts => {
+            console.log("Connected Account: ", accounts[0]);
+          })
+          .catch(error => {
+            console.error("Error connecting to wallet: ", error);
+          });
+      } else {
+        console.log("No Ethereum wallet found. Please install MetaMask or another wallet.");
+      }
+
+      // التقاط معلمة referralID من الرابط
+      const urlParams = new URLSearchParams(window.location.search);
+      const referralID = urlParams.get('referralID');
+
+      if (referralID) {
+        console.log('Referral ID:', referralID);
+      }
+
+      // إعدادات Unity WebGL
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
       var loadingBar = document.querySelector("#unity-loading-bar");
@@ -31,12 +60,6 @@
       var fullscreenButton = document.querySelector("#unity-fullscreen-button");
       var warningBanner = document.querySelector("#unity-warning");
 
-      // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error'.
-      // If type=='warning', a yellow highlight color is used.
-      // Modify or remove this function to customize the visually presented
-      // way that non-critical warnings and error messages are presented to the
-      // user.
       function unityShowBanner(msg, type) {
         function updateBannerVisibility() {
           warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
@@ -55,38 +78,21 @@
         updateBannerVisibility();
       }
 
-      var buildUrl = "Build";
+      // مسارات Unity WebGL
+      var buildUrl = "static/Build"; // التأكد من المسار الصحيح للمجلد Build
       var loaderUrl = buildUrl + "/static.loader.js";
       var config = {
-        dataUrl: buildUrl + "/static.data.gz",
-        frameworkUrl: buildUrl + "/static.framework.js.gz",
-        codeUrl: buildUrl + "/static.wasm.gz",
-        streamingAssetsUrl: "StreamingAssets",
+        dataUrl: buildUrl + "/static.data.gz",        // ملف البيانات Gzip
+        frameworkUrl: buildUrl + "/static.framework.js.gz", // ملف الإطار Gzip
+        codeUrl: buildUrl + "/static.wasm.gz",         // ملف WASM Gzip
+        streamingAssetsUrl: "StreamingAssets",        // مسار الأصول
         companyName: "DefaultCompany",
         productName: "minqx",
         productVersion: "1.0",
         showBanner: unityShowBanner,
       };
 
-      // By default, Unity keeps WebGL canvas render target size matched with
-      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
-      // Set this to false if you want to decouple this synchronization from
-      // happening inside the engine, and you would instead like to size up
-      // the canvas DOM size and WebGL render target sizes yourself.
-      // config.matchWebGLToCanvasSize = false;
-
-      // If you would like all file writes inside Unity Application.persistentDataPath
-      // directory to automatically persist so that the contents are remembered when
-      // the user revisits the site the next time, uncomment the following line:
-      // config.autoSyncPersistentDataPath = true;
-      // This autosyncing is currently not the default behavior to avoid regressing
-      // existing user projects that might rely on the earlier manual
-      // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
-      // expected to change.
-
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Mobile device style: fill the whole browser client area with the game canvas:
-
         var meta = document.createElement('meta');
         meta.name = 'viewport';
         meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
@@ -94,14 +100,8 @@
         container.className = "unity-mobile";
         canvas.className = "unity-mobile";
 
-        // To lower canvas resolution on mobile devices to gain some
-        // performance, uncomment the following line:
-        // config.devicePixelRatio = 1;
-
         unityShowBanner('WebGL builds are not supported on mobile devices.');
       } else {
-        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
-
         canvas.style.width = "1080px";
         canvas.style.height = "1920px";
       }
