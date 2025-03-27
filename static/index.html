@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+عدل لي الكود كما ذكرت  <!DOCTYPE html>
 <html lang="en-us">
   <head>
     <meta charset="utf-8">
@@ -25,14 +25,8 @@
         <div id="unity-build-title">minqx</div>
       </div>
     </div>
-
-    <!-- استخدم الزر الموجود في التطبيق -->
-    <button id="connectTONButton" style="padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 20px;">
-      Connect TON Wallet
-    </button>
-
     <script>
-      // الاتصال بالمحفظة باستخدام Web3.js
+      // اتصال بالمحفظة باستخدام Web3.js
       let web3;
       if (typeof window.ethereum !== 'undefined') {
         web3 = new Web3(window.ethereum);
@@ -49,26 +43,6 @@
       } else {
         console.log("No Ethereum wallet found. Please install MetaMask or another wallet.");
       }
-
-      // استيراد مكتبة TonConnect
-      const tonConnect = new TonConnect();
-
-      // الحصول على الزر الموجود في التطبيق
-      const connectButton = document.getElementById('connectTONButton');
-
-      connectButton.addEventListener('click', async () => {
-        try {
-          // طلب الاتصال بالمحفظة
-          await tonConnect.connectWallet();
-          const wallet = tonConnect.wallet;
-          console.log('Connected to TON Wallet:', wallet);
-
-          // عرض العنوان في نافذة منبثقة
-          alert('Wallet Address: ' + wallet.account.address);
-        } catch (error) {
-          console.error('Error connecting to TON Wallet:', error);
-        }
-      });
 
       // التقاط معلمة referralID من الرابط
       const urlParams = new URLSearchParams(window.location.search);
