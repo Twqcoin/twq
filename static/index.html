@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | minqx</title>
-    <link rel="shortcut icon" href="static/TemplateData/favicon.ico">
-    <link rel="stylesheet" href="static/TemplateData/style.css">
+    <link rel="shortcut icon" href="static/TemplateData/favicon.ico"> <!-- تأكد من مسار favicon -->
+    <link rel="stylesheet" href="static/TemplateData/style.css"> <!-- تأكد من مسار الـ CSS -->
     <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
   </head>
   <body>
@@ -70,12 +70,18 @@
         updateBannerVisibility();
       }
 
-      var buildUrl = "static/Build";
+      // تأكد من المسارات الصحيحة هنا
+      var buildUrl = "static/Build"; // التأكد من المسار الصحيح للمجلد Build
       var loaderUrl = buildUrl + "/static.loader.js";
       var config = {
-        dataUrl: buildUrl + "/static.data.br",
-        frameworkUrl: buildUrl + "/static.framework.js.br",
-        codeUrl: buildUrl + "/static.wasm.br",
+        dataUrl: buildUrl + "/static.data.gz",        // Gzip
+        frameworkUrl: buildUrl + "/static.framework.js.gz", // Gzip
+        codeUrl: buildUrl + "/static.wasm.gz",         // Gzip
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "minqx",
+        productVersion: "1.0",
+        showBanner: unityShowBanner,
       };
 
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
