@@ -44,6 +44,15 @@
         console.log("No Ethereum wallet found. Please install MetaMask or another wallet.");
       }
 
+      // التقاط معلمة referralID من الرابط
+      const urlParams = new URLSearchParams(window.location.search);
+      const referralID = urlParams.get('referralID');
+
+      if (referralID) {
+        console.log('Referral ID:', referralID);
+        // يمكنك هنا إرسال referralID إلى الخادم أو تخزينه في الجلسة أو استخدامه في التطبيق
+      }
+
       // إعدادات Unity WebGL
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
