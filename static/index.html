@@ -4,20 +4,20 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | minqx</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
+    <link rel="shortcut icon" href="static/TemplateData/favicon.ico">
+    <link rel="stylesheet" href="static/TemplateData/style.css">
     <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas" width="1080" height="1920"></canvas>
+      <canvas id="unity-canvas" width=1080 height=1920></canvas>
       <div id="unity-loading-bar">
         <div id="unity-logo"></div>
         <div id="unity-progress-bar-empty">
           <div id="unity-progress-bar-full"></div>
         </div>
       </div>
-      <div id="unity-warning"></div>
+      <div id="unity-warning"> </div>
       <div id="unity-footer">
         <div id="unity-webgl-logo"></div>
         <div id="unity-fullscreen-button"></div>
@@ -35,6 +35,7 @@
         ethereum.request({ method: 'eth_requestAccounts' })
           .then(accounts => {
             console.log("Connected Account: ", accounts[0]);
+            // هنا يمكنك إرسال طلبات للمحفظة أو إجراء عمليات أخرى
           })
           .catch(error => {
             console.error("Error connecting to wallet: ", error);
@@ -69,17 +70,12 @@
         updateBannerVisibility();
       }
 
-      var buildUrl = "Build";
+      var buildUrl = "static/Build";
       var loaderUrl = buildUrl + "/static.loader.js";
       var config = {
-        dataUrl: buildUrl + "/static.data.gz",
-        frameworkUrl: buildUrl + "/static.framework.js.gz",
-        codeUrl: buildUrl + "/static.wasm.gz",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "DefaultCompany",
-        productName: "minqx",
-        productVersion: "1.0",
-        showBanner: unityShowBanner,
+        dataUrl: buildUrl + "/static.data.br",
+        frameworkUrl: buildUrl + "/static.framework.js.br",
+        codeUrl: buildUrl + "/static.wasm.br",
       };
 
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
