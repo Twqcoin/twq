@@ -4,8 +4,9 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | My project</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
+    <!-- تعديل المسار إلى TemplateData داخل المجلد static -->
+    <link rel="shortcut icon" href="static/TemplateData/favicon.ico">
+    <link rel="stylesheet" href="static/TemplateData/style.css">
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
@@ -49,13 +50,14 @@
         updateBannerVisibility();
       }
 
-      var buildUrl = "Build";
+      // تعديل المسار إلى المجلد Build داخل static
+      var buildUrl = "static/Build";
       var loaderUrl = buildUrl + "/minqx.loader.js";
       var config = {
         dataUrl: buildUrl + "/minqx.data",
         frameworkUrl: buildUrl + "/minqx.framework.js",
         codeUrl: buildUrl + "/minqx.wasm",
-        streamingAssetsUrl: "StreamingAssets",
+        streamingAssetsUrl: "static/StreamingAssets",
         companyName: "DefaultCompany",
         productName: "My project",
         productVersion: "0.1",
@@ -81,15 +83,15 @@
       script.onload = () => {
         createUnityInstance(canvas, config, (progress) => {
           progressBarFull.style.width = 100 * progress + "%";
-              }).then((unityInstance) => {
-                loadingBar.style.display = "none";
-                fullscreenButton.onclick = () => {
-                  unityInstance.SetFullscreen(1);
-                };
-              }).catch((message) => {
-                alert(message);
-              });
-            };
+        }).then((unityInstance) => {
+          loadingBar.style.display = "none";
+          fullscreenButton.onclick = () => {
+            unityInstance.SetFullscreen(1);
+          };
+        }).catch((message) => {
+          alert(message);
+        });
+      };
 
       document.body.appendChild(script);
     </script>
