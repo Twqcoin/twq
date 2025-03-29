@@ -4,9 +4,9 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | minqx</title>
-    <!-- ========== Resources Paths ========== -->
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
+    <!-- ========== مسارات الموارد الثابتة ========== -->
+    <link rel="shortcut icon" href="static/TemplateData/favicon.ico">
+    <link rel="stylesheet" href="static/TemplateData/style.css">
     <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
     <script src="https://unpkg.com/@tonconnect/sdk@latest/dist/tonconnect-sdk.min.js"></script>
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap: https://ssl.gstatic.com 'unsafe-eval' 'unsafe-inline'">
@@ -34,18 +34,19 @@
     </div>
 
     <script>
-      // ========== Define Paths ========== //
+      // ========== تعريف المسارات الأساسية ========== //
       const PATHS = {
         base: '.',
-        build: './Build',
-        templateData: './TemplateData',
+        build: './static/Build',  // تم تعديل المسار إلى static/Build
+        templateData: './static/TemplateData',  // تم تعديل المسار إلى static/TemplateData
         streamingAssets: 'StreamingAssets',
-        defaultUserImage: './TemplateData/default-user.png'
+        defaultUserImage: './static/TemplateData/default-user.png',  // تم تعديل المسار إلى static/TemplateData
+        placeholderImage: 'https://via.placeholder.com/100'
       };
 
-      // ========== Unity Configuration ========== //
+      // ========== إعدادات Unity ========== //
       const UNITY_CONFIG = {
-        loaderUrl: `${PATHS.build}/minqx.loader.js`,
+        loaderUrl: `${PATHS.build}/minqx.loader.js`,  // تعديل المسار
         dataUrl: `${PATHS.build}/minqx.data`,
         frameworkUrl: `${PATHS.build}/minqx.framework.js`,
         codeUrl: `${PATHS.build}/minqx.wasm`,
@@ -55,29 +56,45 @@
         productVersion: "1.0"
       };
 
-      // ========== User Data ========== //
+      // ========== معالجة بيانات المستخدم ========== //
       const urlParams = new URLSearchParams(window.location.search);
       const userData = {
         id: urlParams.get('user_id'),
-        name: urlParams.get('name') || "Guest",
-        photo: urlParams.get('photo') || PATHS.defaultUserImage
+        name: urlParams.get('name'),
+        username: urlParams.get('username'),
+        photo: urlParams.get('photo')
       };
 
+      // دالة محسنة لتحميل صورة المستخدم
       function loadUserProfile() {
         const photoElement = document.getElementById("user-photo");
         const nameElement = document.getElementById("user-name");
-        nameElement.textContent = userData.name;
-        loadImageWithFallback(photoElement, userData.photo, PATHS.defaultUserImage);
+
+        nameElement.textContent = userData.name || "Guest";
+        
+        // تحقق من وجود صورة مستخدم صالحة
+        const imgUrl = userData.photo && isValidImageUrl(userData.photo) 
+          ? userData.photo 
+          : PATHS.defaultUserImage;
+        
+        loadImageWithFallback(photoElement, imgUrl, PATHS.defaultUserImage);
+      }
+
+      function isValidImageUrl(url) {
+        return url && (url.startsWith('http') || url.startsWith('data:image'));
       }
 
       function loadImageWithFallback(element, url, fallbackUrl) {
         const img = new Image();
         img.onload = () => element.src = url;
-        img.onerror = () => element.src = fallbackUrl;
+        img.onerror = () => {
+          console.warn("Failed to load image, using fallback:", url);
+          element.src = fallbackUrl;
+        };
         img.src = url;
       }
 
-      // ========== Unity Loader ========== //
+      // ========== إعدادات Unity WebGL ========== //
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
       var loadingBar = document.querySelector("#unity-loading-bar");
@@ -86,19 +103,42 @@
       var warningBanner = document.querySelector("#unity-warning");
 
       function unityShowBanner(msg, type) {
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        }
         var div = document.createElement('div');
         div.innerHTML = msg;
-        div.style = type === 'error' ? 'background: red; padding: 10px;' : 'background: yellow; padding: 10px;';
         warningBanner.appendChild(div);
-        setTimeout(() => warningBanner.removeChild(div), 5000);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+        updateBannerVisibility();
       }
 
+      // تحميل الموارد مع معالجة الأخطاء
       function loadUnityResources() {
         loadingBar.style.display = "block";
+        
+        // فحص المسارات قبل التحميل
+        console.log("Unity Config Paths:", {
+          loader: UNITY_CONFIG.loaderUrl,
+          data: UNITY_CONFIG.dataUrl,
+          framework: UNITY_CONFIG.frameworkUrl,
+          wasm: UNITY_CONFIG.codeUrl
+        });
 
         var script = document.createElement("script");
         script.src = UNITY_CONFIG.loaderUrl;
-
+        script.onerror = () => {
+          console.error("Failed to load Unity loader script");
+          unityShowBanner("Failed to load game resources", 'error');
+        };
+        
         script.onload = () => {
           createUnityInstance(canvas, {
             ...UNITY_CONFIG,
@@ -109,19 +149,17 @@
             unityInstance = instance;
             loadingBar.style.display = "none";
             fullscreenButton.onclick = () => unityInstance.SetFullscreen(1);
+            initTONWalletBridge();
           }).catch((message) => {
-            unityShowBanner("Unity initialization failed: " + message, 'error');
+            console.error("Unity initialization failed:", message);
+            unityShowBanner("Game initialization failed", 'error');
           });
         };
-
-        script.onerror = () => {
-          unityShowBanner("Failed to load Unity loader script", 'error');
-        };
-
+        
         document.body.appendChild(script);
       }
 
-      // Adjust for Mobile
+      // تكييف الواجهة للجوال
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         var meta = document.createElement('meta');
         meta.name = 'viewport';
@@ -135,9 +173,50 @@
         canvas.style.height = "1920px";
       }
 
-      // Initialize
+      // تهيئة التطبيق
       loadUserProfile();
       loadUnityResources();
+
+      // ========== TON Wallet Functions ========== //
+      function initTONWalletBridge() {
+        const walletAddress = urlParams.get('tonconnect');
+        if (walletAddress && isValidTONAddress(walletAddress)) {
+          localStorage.setItem('TON_WALLET_ADDRESS', walletAddress);
+          if (unityInstance) {
+            unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletConnected', walletAddress);
+          }
+          history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+
+      function ConnectTONWallet() {
+        const returnUrl = encodeURIComponent(window.location.href.split('?')[0]);
+        window.open(`https://t.me/wallet?startattach=wallet&return_url=${returnUrl}`);
+      }
+
+      function DisconnectTONWallet() {
+        localStorage.removeItem('TON_WALLET_ADDRESS');
+        if (unityInstance) {
+          unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletDisconnected');
+        }
+      }
+
+      async function GetWalletBalance(walletAddress) {
+        try {
+          const dummyBalance = (Math.random() * 100).toFixed(4);
+          if (unityInstance) {
+            unityInstance.SendMessage('TelegramWalletConnector', 'OnBalanceUpdated', dummyBalance);
+          }
+          return dummyBalance;
+        } catch (error) {
+          console.error("Error fetching balance:", error);
+          return "0";
+        }
+      }
+
+      function isValidTONAddress(address) {
+        return /^(?:[a-km-zA-HJ-NP-Z1-9]{48}|0:[a-fA-F0-9]{64})$/.test(address);
+      }
     </script>
   </body>
 </html>
