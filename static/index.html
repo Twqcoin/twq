@@ -27,9 +27,7 @@
     </div>
 
     <div class="user-info">
-      <!-- عرض صورة المستخدم هنا -->
       <img id="user-photo" src="" alt="User Photo" width="100" height="100">
-      <!-- عرض اسم المستخدم هنا -->
       <h2 id="user-name"></h2>
     </div>
 
@@ -44,23 +42,19 @@
       if (userId && userName && userUsername && userPhoto) {
         console.log('User Info:', { userId, userName, userUsername, userPhoto });
 
-        // تحديث صورة اللاعب واسم اللاعب في الـ DOM
         const photoElement = document.getElementById("user-photo");
         const nameElement = document.getElementById("user-name");
 
-        // التأكد من أن الصورة يتم تحميلها
         const img = new Image();
         img.onload = function() {
-          // إذا تم تحميل الصورة بنجاح، أضف الصورة إلى العنصر
           photoElement.src = userPhoto;
           nameElement.textContent = userName;
         };
         img.onerror = function() {
-          // إذا فشل تحميل الصورة، استخدم صورة افتراضية أو رسالة خطأ
-          photoElement.src = 'https://via.placeholder.com/100'; // صورة افتراضية
+          photoElement.src = 'https://via.placeholder.com/100';
           console.error("Failed to load the image.");
         };
-        img.src = userPhoto; // محاولة تحميل الصورة
+        img.src = userPhoto;
       } else {
         console.error('Missing user information in URL.');
       }
@@ -91,7 +85,6 @@
         updateBannerVisibility();
       }
 
-      // مسارات Unity WebGL
       var buildUrl = "static/Build"; 
       var loaderUrl = buildUrl + "/static.loader.js"; 
       var config = {
@@ -120,21 +113,74 @@
 
       loadingBar.style.display = "block";
 
+      // متغير لحفظ نسخة Unity
+      var unityInstance = null;
+
       var script = document.createElement("script");
       script.src = loaderUrl;
       script.onload = () => {
         createUnityInstance(canvas, config, (progress) => {
           progressBarFull.style.width = 100 * progress + "%";
-        }).then((unityInstance) => {
+        }).then((instance) => {
+          unityInstance = instance;
           loadingBar.style.display = "none";
           fullscreenButton.onclick = () => {
             unityInstance.SetFullscreen(1);
           };
+          
+          // تهيئة المحفظة بعد تحميل Unity
+          initTONWalletBridge();
         }).catch((message) => {
           alert(message);
         });
       };
       document.body.appendChild(script);
+
+      // ========== TON Wallet Bridge (Hidden) ==========
+      function initTONWalletBridge() {
+        // معالجة العودة من تليجرام
+        const urlParams = new URLSearchParams(window.location.search);
+        const walletAddress = urlParams.get('tonconnect');
+        
+        if (walletAddress && isValidTONAddress(walletAddress)) {
+          localStorage.setItem('TON_WALLET_ADDRESS', walletAddress);
+          if (unityInstance) {
+            unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletConnected', walletAddress);
+          }
+          history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+
+      // الدوال التي يستدعيها Unity
+      function ConnectTONWallet() {
+        const returnUrl = encodeURIComponent(window.location.href.split('?')[0]);
+        window.open(`https://t.me/wallet?startattach=wallet&return_url=${returnUrl}`);
+      }
+
+      function DisconnectTONWallet() {
+        localStorage.removeItem('TON_WALLET_ADDRESS');
+        if (unityInstance) {
+          unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletDisconnected');
+        }
+      }
+
+      async function GetWalletBalance(walletAddress) {
+        try {
+          // استبدل هذا بطلب API حقيقي لشبكة TON
+          const dummyBalance = (Math.random() * 100).toFixed(4);
+          if (unityInstance) {
+            unityInstance.SendMessage('TelegramWalletConnector', 'OnBalanceUpdated', dummyBalance);
+          }
+          return dummyBalance;
+        } catch (error) {
+          console.error("Error fetching balance:", error);
+          return "0";
+        }
+      }
+
+      function isValidTONAddress(address) {
+        return /^(?:[a-km-zA-HJ-NP-Z1-9]{48}|0:[a-fA-F0-9]{64})$/.test(address);
+      }
     </script>
   </body>
 </html>
