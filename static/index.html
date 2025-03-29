@@ -102,14 +102,19 @@
         
         script.onerror = function(error) {
           var errorMsg = `
-         
+            فشل تحميل Unity!<br><br><b>الخطأ:</b> ${error.message}<br><br>
+            <b>الحلول المقترحة:</b><br>
+            1. تحديث المتصفح<br>
+            2. تفعيل WebAssembly في إعدادات المتصفح<br>
+            3. التأكد من دعم السيرفر لملفات .br
+          `;
           unityShowBanner(errorMsg, 'error');
           console.error("Error loading:", error);
         };
 
         script.onload = function() {
           if (typeof createUnityInstance === 'undefined') {
-            unityShowBanner("Unity loader failed to initialize!", 'error');
+            unityShowBanner("فشل تحميل المحمل الخاص بـ Unity!", 'error');
             return;
           }
           
