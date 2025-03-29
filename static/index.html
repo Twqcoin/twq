@@ -8,8 +8,8 @@
     <meta http-equiv="Access-Control-Allow-Origin" content="*">
     <meta http-equiv="Cross-Origin-Opener-Policy" content="unsafe-none">
     <meta http-equiv="Cross-Origin-Embedder-Policy" content="unsafe-none">
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
+    <link rel="shortcut icon" href="static/TemplateData/favicon.ico">
+    <link rel="stylesheet" href="static/TemplateData/style.css">
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
@@ -54,7 +54,7 @@
       }
 
       // ========== إعدادات المسارات المعدلة ========== //
-      var buildUrl = "Build";
+      var buildUrl = "static/Build";
       var loaderUrl = buildUrl + "/static.loader.js";
       var config = {
         dataUrl: buildUrl + "/static.data.br",
@@ -102,18 +102,7 @@
         
         script.onerror = function(error) {
           var errorMsg = `
-            فشل تحميل ملفات اللعبة!<br><br>
-            <b>السبب المحتمل:</b><br>
-            1. الملفات غير موجودة في مجلد Build/<br>
-            2. مشكلة في السيرفر<br>
-            3. أسماء الملفات غير متطابقة<br><br>
-            <b>الحل:</b><br>
-            - تأكد من وجود هذه الملفات:<br>
-            • static.loader.js<br>
-            • static.data.br<br>
-            • static.wasm.br<br>
-            - تحقق من Console (F12) لمزيد من التفاصيل
-          `;
+         
           unityShowBanner(errorMsg, 'error');
           console.error("Error loading:", error);
         };
