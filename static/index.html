@@ -4,11 +4,20 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | minqx</title>
-    <!-- ========== مسارات الموارد الثابتة ========== -->
     <link rel="shortcut icon" href="./static/TemplateData/favicon.ico">
     <link rel="stylesheet" href="./static/TemplateData/style.css">
+    
+    <!-- سياسة أمان المحتوى المعدلة -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self' data: gap: https://ssl.gstatic.com;
+      script-src 'self' https://cdn.jsdelivr.net https://unpkg.com 'unsafe-eval' 'unsafe-inline';
+      style-src 'self' 'unsafe-inline';
+      img-src 'self' data: https://via.placeholder.com;
+      connect-src 'self' https://*;
+      frame-src 'self' https://*;
+    ">
+    
     <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap: https://ssl.gstatic.com 'unsafe-eval' 'unsafe-inline'">
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
@@ -32,238 +41,211 @@
       <h2 id="user-name"></h2>
     </div>
 
-    <!-- إضافة TonConnect SDK في نهاية body -->
-    <script src="https://unpkg.com/@tonconnect/sdk@latest/dist/tonconnect-sdk.min.js"></script>
+    <!-- تحميل TonConnect SDK -->
+    <script src="https://unpkg.com/@tonconnect/sdk@2.1.1/dist/tonconnect-sdk.min.js"></script>
     
     <script>
-      // الانتظار حتى يتم تحميل جميع المكتبات
-      function initApp() {
-        // ========== تهيئة TonConnect ========== //
-        if (typeof TonConnect === 'undefined') {
-          console.error('TonConnect SDK failed to load');
-          return;
-        }
-
-        const connector = new TonConnect.TonConnect({
-          manifestUrl: 'https://yourdomain.com/tonconnect-manifest.json'
-        });
-
-        // ========== تعريف المسارات الأساسية ========== //
-        const PATHS = {
-          base: './static',
-          build: './static/Build',
-          templateData: './static/TemplateData',
-          streamingAssets: 'StreamingAssets',
-          defaultUserImage: './static/TemplateData/default-user.png',
-          placeholderImage: 'https://via.placeholder.com/100'
-        };
-
-        // ========== إعدادات Unity ========== //
-        const UNITY_CONFIG = {
-          loaderUrl: `${PATHS.build}/minqx.loader.js`,
-          dataUrl: `${PATHS.build}/minqx.data`,
-          frameworkUrl: `${PATHS.build}/minqx.framework.js`,
-          codeUrl: `${PATHS.build}/minqx.wasm`,
-          streamingAssetsUrl: PATHS.streamingAssets,
-          companyName: "DefaultCompany",
-          productName: "minqx",
-          productVersion: "1.0"
-        };
-
-        // ========== معالجة بيانات المستخدم ========== //
-        const urlParams = new URLSearchParams(window.location.search);
-        const userData = {
-          id: urlParams.get('user_id'),
-          name: urlParams.get('name'),
-          username: urlParams.get('username'),
-          photo: urlParams.get('photo')
-        };
-
-        // دالة محسنة لتحميل صورة المستخدم
-        function loadUserProfile() {
-          const photoElement = document.getElementById("user-photo");
-          const nameElement = document.getElementById("user-name");
-
-          nameElement.textContent = userData.name || "Guest";
+      // ========== نظام إدارة التطبيق ==========
+      const App = {
+        unityInstance: null,
+        connector: null,
+        
+        init: function() {
+          this.checkDependencies()
+            .then(() => this.setupTonConnect())
+            .then(() => this.setupUnity())
+            .then(() => this.loadUserProfile())
+            .catch(error => {
+              console.error('Application initialization failed:', error);
+              this.showError('Failed to initialize application');
+            });
+        },
+        
+        // ========== التحقق من المكتبات المطلوبة ==========
+        checkDependencies: function() {
+          return new Promise((resolve, reject) => {
+            if (typeof TonConnect === 'undefined') {
+              reject(new Error('TonConnect SDK not loaded'));
+              return;
+            }
+            resolve();
+          });
+        },
+        
+        // ========== تهيئة TonConnect ==========
+        setupTonConnect: function() {
+          this.connector = new TonConnect.TonConnect({
+            manifestUrl: 'https://yourdomain.com/tonconnect-manifest.json'
+          });
           
-          const imgUrl = userData.photo || PATHS.defaultUserImage;
-          loadImageWithFallback(photoElement, imgUrl, PATHS.defaultUserImage);
-        }
-
-        function loadImageWithFallback(element, url, fallbackUrl) {
+          // استعادة حالة المحفظة إذا كانت متصلة سابقاً
+          const walletConnectionSource = { jsBridgeKey: 'tonconnect' };
+          this.connector.restoreConnection(walletConnectionSource);
+        },
+        
+        // ========== إعدادات Unity ==========
+        setupUnity: function() {
+          const PATHS = {
+            base: './static',
+            build: './static/Build',
+            templateData: './static/TemplateData',
+            streamingAssets: 'StreamingAssets',
+            defaultUserImage: './static/TemplateData/default-user.png',
+            placeholderImage: 'https://via.placeholder.com/100'
+          };
+          
+          const UNITY_CONFIG = {
+            loaderUrl: `${PATHS.build}/minqx.loader.js`,
+            dataUrl: `${PATHS.build}/minqx.data`,
+            frameworkUrl: `${PATHS.build}/minqx.framework.js`,
+            codeUrl: `${PATHS.build}/minqx.wasm`,
+            streamingAssetsUrl: PATHS.streamingAssets,
+            companyName: "DefaultCompany",
+            productName: "minqx",
+            productVersion: "1.0"
+          };
+          
+          return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = UNITY_CONFIG.loaderUrl;
+            
+            script.onload = () => {
+              createUnityInstance(document.querySelector("#unity-canvas"), {
+                ...UNITY_CONFIG,
+                showBanner: this.showBanner.bind(this)
+              }, (progress) => {
+                document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
+              }).then(instance => {
+                this.unityInstance = instance;
+                document.querySelector("#unity-fullscreen-button").onclick = () => 
+                  instance.SetFullscreen(1);
+                resolve();
+              }).catch(reject);
+            };
+            
+            script.onerror = () => reject(new Error('Failed to load Unity script'));
+            document.body.appendChild(script);
+          });
+        },
+        
+        // ========== معالجة بيانات المستخدم ==========
+        loadUserProfile: function() {
+          const urlParams = new URLSearchParams(window.location.search);
+          const userData = {
+            name: urlParams.get('name') || "Guest",
+            photo: urlParams.get('photo') || './static/TemplateData/default-user.png'
+          };
+          
+          document.getElementById("user-name").textContent = userData.name;
+          this.loadImageWithFallback(
+            document.getElementById("user-photo"), 
+            userData.photo,
+            './static/TemplateData/default-user.png'
+          );
+        },
+        
+        loadImageWithFallback: function(element, url, fallbackUrl) {
           const img = new Image();
           img.onload = () => element.src = url;
           img.onerror = () => {
-            console.warn("Failed to load image, using fallback:", url);
+            console.warn("Failed to load image, using fallback");
             element.src = fallbackUrl;
           };
           img.src = url;
-        }
-
-        // ========== إعدادات Unity WebGL ========== //
-        var container = document.querySelector("#unity-container");
-        var canvas = document.querySelector("#unity-canvas");
-        var loadingBar = document.querySelector("#unity-loading-bar");
-        var progressBarFull = document.querySelector("#unity-progress-bar-full");
-        var fullscreenButton = document.querySelector("#unity-fullscreen-button");
-        var warningBanner = document.querySelector("#unity-warning");
-
-        function unityShowBanner(msg, type) {
-          function updateBannerVisibility() {
-            warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        },
+        
+        // ========== وظائف محفظة TON ==========
+        connectTONWallet: function() {
+          if (!this.connector) {
+            console.error('TonConnect not initialized');
+            return;
           }
-          var div = document.createElement('div');
-          div.innerHTML = msg;
-          warningBanner.appendChild(div);
-          if (type == 'error') div.style = 'background: red; padding: 10px;';
-          else {
-            if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-            setTimeout(function() {
-              warningBanner.removeChild(div);
-              updateBannerVisibility();
-            }, 5000);
-          }
-          updateBannerVisibility();
-        }
-
-        // تحميل الموارد مع معالجة الأخطاء
-        function loadUnityResources() {
-          loadingBar.style.display = "block";
           
-          var script = document.createElement("script");
-          script.src = UNITY_CONFIG.loaderUrl;
-          script.onerror = () => {
-            console.error("Failed to load Unity loader script");
-            unityShowBanner("Failed to load game resources", 'error');
-          };
+          const walletConnectionSource = { jsBridgeKey: 'tonconnect' };
+          const connectUrl = this.connector.connect(walletConnectionSource);
           
-          script.onload = () => {
-            createUnityInstance(canvas, {
-              ...UNITY_CONFIG,
-              showBanner: unityShowBanner
-            }, (progress) => {
-              progressBarFull.style.width = 100 * progress + "%";
-            }).then((instance) => {
-              unityInstance = instance;
-              loadingBar.style.display = "none";
-              fullscreenButton.onclick = () => unityInstance.SetFullscreen(1);
-              initTONWalletBridge();
-            }).catch((message) => {
-              console.error("Unity initialization failed:", message);
-              unityShowBanner("Game initialization failed", 'error');
-            });
-          };
+          window.open(connectUrl, '_blank');
           
-          document.body.appendChild(script);
-        }
-
-        // تكييف الواجهة للجوال
-        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-          var meta = document.createElement('meta');
-          meta.name = 'viewport';
-          meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-          document.head.appendChild(meta);
-          container.className = "unity-mobile";
-          canvas.className = "unity-mobile";
-          unityShowBanner('WebGL builds are not supported on mobile devices.');
-        } else {
-          canvas.style.width = "1080px";
-          canvas.style.height = "1920px";
-        }
-
-        // ========== وظائف محفظة TON ========== //
-        function initTONWalletBridge() {
-          const walletAddress = localStorage.getItem('TON_WALLET_ADDRESS');
-          if (walletAddress && isValidTONAddress(walletAddress)) {
-            if (unityInstance) {
-              unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletConnected', walletAddress);
-            }
-          }
-        }
-
-        function connectTONWallet() {
-          try {
-            console.log("بدء عملية الاتصال بمحفظة TON...");
-            
-            const walletConnectionSource = {
-              jsBridgeKey: 'tonconnect'
-            };
-            
-            const connectUrl = connector.connect(walletConnectionSource);
-            window.open(connectUrl, '_blank');
-            
-            connector.onStatusChange((wallet) => {
-              if (wallet) {
-                console.log("تم الاتصال بالمحفظة بنجاح:", wallet);
-                localStorage.setItem('TON_WALLET_ADDRESS', wallet.account.address);
-                
-                if (unityInstance) {
-                  unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletConnected', wallet.account.address);
-                }
-              } else {
-                console.log("تم قطع الاتصال بالمحفظة");
+          this.connector.onStatusChange(wallet => {
+            if (wallet) {
+              localStorage.setItem('TON_WALLET_ADDRESS', wallet.account.address);
+              if (this.unityInstance) {
+                this.unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletConnected', wallet.account.address);
               }
-            });
-            
-          } catch (error) {
-            console.error("خطأ في الاتصال بالمحفظة:", error);
-            if (unityInstance) {
-              unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletError', error.message);
+            }
+          });
+        },
+        
+        disconnectTONWallet: function() {
+          if (this.connector) {
+            this.connector.disconnect();
+            localStorage.removeItem('TON_WALLET_ADDRESS');
+            if (this.unityInstance) {
+              this.unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletDisconnected');
             }
           }
-        }
-
-        function disconnectTONWallet() {
-          connector.disconnect();
-          localStorage.removeItem('TON_WALLET_ADDRESS');
-          if (unityInstance) {
-            unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletDisconnected');
-          }
-          console.log("تم قطع الاتصال بالمحفظة");
-        }
-
-        async function getWalletBalance(walletAddress) {
+        },
+        
+        getWalletBalance: async function(walletAddress) {
+          if (!this.connector) return "0";
+          
           try {
-            const balance = await connector.getBalance(walletAddress);
-            if (unityInstance) {
-              unityInstance.SendMessage('TelegramWalletConnector', 'OnBalanceUpdated', balance.toString());
-            }
-            return balance;
+            const balance = await this.connector.getBalance(walletAddress);
+            return balance.toString();
           } catch (error) {
             console.error("Error fetching balance:", error);
             return "0";
           }
+        },
+        
+        // ========== أدوات مساعدة ==========
+        showBanner: function(msg, type) {
+          const warningBanner = document.querySelector("#unity-warning");
+          const div = document.createElement('div');
+          div.innerHTML = msg;
+          
+          if (type === 'error') {
+            div.style = 'background: red; padding: 10px;';
+          } else if (type === 'warning') {
+            div.style = 'background: yellow; padding: 10px;';
+            setTimeout(() => warningBanner.removeChild(div), 5000);
+          }
+          
+          warningBanner.appendChild(div);
+          warningBanner.style.display = 'block';
+        },
+        
+        showError: function(message) {
+          this.showBanner(message, 'error');
+        },
+        
+        // جعل الدوال متاحة لـ Unity
+        exposeToUnity: function() {
+          window.TON = {
+            connectWallet: this.connectTONWallet.bind(this),
+            disconnectWallet: this.disconnectTONWallet.bind(this),
+            getBalance: this.getWalletBalance.bind(this)
+          };
         }
-
-        function isValidTONAddress(address) {
-          return /^(?:[a-km-zA-HJ-NP-Z1-9]{48}|0:[a-fA-F0-9]{64})$/.test(address);
-        }
-
-        // جعل الدوال متاحة globally ليمكن استدعاؤها من Unity
-        window.TON = {
-          connectWallet: connectTONWallet,
-          disconnectWallet: disconnectTONWallet,
-          getBalance: getWalletBalance
-        };
-
-        // تهيئة التطبيق
-        loadUserProfile();
-        loadUnityResources();
+      };
+      
+      // تكييف الواجهة للجوال
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        const meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.head.appendChild(meta);
+        document.querySelector("#unity-container").className = "unity-mobile";
+        document.querySelector("#unity-canvas").className = "unity-mobile";
+      } else {
+        document.querySelector("#unity-canvas").style.width = "1080px";
+        document.querySelector("#unity-canvas").style.height = "1920px";
       }
-
-      // بدء التطبيق بعد تحميل الصفحة والمكتبات
+      
+      // بدء التطبيق عند اكتمال تحميل الصفحة
       document.addEventListener('DOMContentLoaded', function() {
-        // التأكد من تحميل TonConnect SDK
-        if (typeof TonConnect !== 'undefined') {
-          initApp();
-        } else {
-          const checkTonConnect = setInterval(function() {
-            if (typeof TonConnect !== 'undefined') {
-              clearInterval(checkTonConnect);
-              initApp();
-            }
-          }, 100);
-        }
+        App.exposeToUnity();
+        App.init();
       });
     </script>
   </body>
