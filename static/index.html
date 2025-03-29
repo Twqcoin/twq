@@ -5,38 +5,51 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | minqx</title>
     <!-- ========== مسارات الموارد الثابتة ========== -->
-    <link rel="shortcut icon" href="./static/TemplateData/favicon.ico">
-    <link rel="stylesheet" href="./static/TemplateData/style.css">
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
     <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
     <script src="https://unpkg.com/@tonconnect/sdk@latest/dist/tonconnect-sdk.min.js"></script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap: https://ssl.gstatic.com 'unsafe-eval' 'unsafe-inline'">
   </head>
   <body>
-    <!-- بقية الهيكل HTML يبقى كما هو -->
     <div id="unity-container" class="unity-desktop">
-      <!-- ... -->
+      <canvas id="unity-canvas" width="1080" height="1920"></canvas>
+      <div id="unity-loading-bar">
+        <div id="unity-logo"></div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
+        </div>
+      </div>
+      <div id="unity-warning"></div>
+      <div id="unity-footer">
+        <div id="unity-webgl-logo"></div>
+        <div id="unity-fullscreen-button"></div>
+        <div id="unity-build-title">minqx</div>
+      </div>
     </div>
 
     <div class="user-info">
-      <!-- ... -->
+      <img id="user-photo" src="" alt="User Photo" width="100" height="100">
+      <h2 id="user-name"></h2>
     </div>
 
     <script>
       // ========== تعريف المسارات الأساسية ========== //
       const PATHS = {
-        base: './static',
-        build: './static/Build',
-        templateData: './static/TemplateData',
+        base: '.',
+        build: './Build',
+        templateData: './TemplateData',
         streamingAssets: 'StreamingAssets',
-        defaultUserImage: './static/TemplateData/default-user.png',
+        defaultUserImage: './TemplateData/default-user.png',
         placeholderImage: 'https://via.placeholder.com/100'
       };
 
       // ========== إعدادات Unity ========== //
       const UNITY_CONFIG = {
-        loaderUrl: `${PATHS.build}/static.loader.js`,
-        dataUrl: `${PATHS.build}/static.data.gz`,
-        frameworkUrl: `${PATHS.build}/static.framework.js.gz`,
-        codeUrl: `${PATHS.build}/static.wasm.gz`,
+        loaderUrl: `${PATHS.build}/minqx.loader.js`,  // تغيير static إلى اسم مشروعك
+        dataUrl: `${PATHS.build}/minqx.data`,
+        frameworkUrl: `${PATHS.build}/minqx.framework.js`,
+        codeUrl: `${PATHS.build}/minqx.wasm`,
         streamingAssetsUrl: PATHS.streamingAssets,
         companyName: "DefaultCompany",
         productName: "minqx",
@@ -52,32 +65,34 @@
         photo: urlParams.get('photo')
       };
 
-      // دالة لتحميل صورة المستخدم مع معالجة الأخطاء
+      // دالة محسنة لتحميل صورة المستخدم
       function loadUserProfile() {
         const photoElement = document.getElementById("user-photo");
         const nameElement = document.getElementById("user-name");
 
-        if (userData.id) {
-          nameElement.textContent = userData.name || "Guest";
-          
-          const img = new Image();
-          img.onload = function() {
-            photoElement.src = userData.photo;
-          };
-          img.onerror = function() {
-            photoElement.src = PATHS.defaultUserImage;
-            console.warn("Failed to load user image, using default");
-          };
-          img.src = userData.photo || PATHS.defaultUserImage;
-        } else {
-          console.log('No user ID provided');
-          photoElement.src = PATHS.defaultUserImage;
-          nameElement.textContent = "Guest";
-        }
+        nameElement.textContent = userData.name || "Guest";
+        
+        // تحقق من وجود صورة مستخدم صالحة
+        const imgUrl = userData.photo && isValidImageUrl(userData.photo) 
+          ? userData.photo 
+          : PATHS.defaultUserImage;
+        
+        loadImageWithFallback(photoElement, imgUrl, PATHS.defaultUserImage);
       }
 
-      // تهيئة عرض بيانات المستخدم
-      loadUserProfile();
+      function isValidImageUrl(url) {
+        return url && (url.startsWith('http') || url.startsWith('data:image'));
+      }
+
+      function loadImageWithFallback(element, url, fallbackUrl) {
+        const img = new Image();
+        img.onload = () => element.src = url;
+        img.onerror = () => {
+          console.warn("Failed to load image, using fallback:", url);
+          element.src = fallbackUrl;
+        };
+        img.src = url;
+      }
 
       // ========== إعدادات Unity WebGL ========== //
       var container = document.querySelector("#unity-container");
@@ -105,18 +120,51 @@
         updateBannerVisibility();
       }
 
-      // تحديث config بإعدادات المسارات الجديدة
-      var config = {
-        ...UNITY_CONFIG,
-        showBanner: unityShowBanner
-      };
+      // تحميل الموارد مع معالجة الأخطاء
+      function loadUnityResources() {
+        loadingBar.style.display = "block";
+        
+        // فحص المسارات قبل التحميل
+        console.log("Unity Config Paths:", {
+          loader: UNITY_CONFIG.loaderUrl,
+          data: UNITY_CONFIG.dataUrl,
+          framework: UNITY_CONFIG.frameworkUrl,
+          wasm: UNITY_CONFIG.codeUrl
+        });
+
+        var script = document.createElement("script");
+        script.src = UNITY_CONFIG.loaderUrl;
+        script.onerror = () => {
+          console.error("Failed to load Unity loader script");
+          unityShowBanner("Failed to load game resources", 'error');
+        };
+        
+        script.onload = () => {
+          createUnityInstance(canvas, {
+            ...UNITY_CONFIG,
+            showBanner: unityShowBanner
+          }, (progress) => {
+            progressBarFull.style.width = 100 * progress + "%";
+          }).then((instance) => {
+            unityInstance = instance;
+            loadingBar.style.display = "none";
+            fullscreenButton.onclick = () => unityInstance.SetFullscreen(1);
+            initTONWalletBridge();
+          }).catch((message) => {
+            console.error("Unity initialization failed:", message);
+            unityShowBanner("Game initialization failed", 'error');
+          });
+        };
+        
+        document.body.appendChild(script);
+      }
 
       // تكييف الواجهة للجوال
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         var meta = document.createElement('meta');
         meta.name = 'viewport';
         meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
+        document.head.appendChild(meta);
         container.className = "unity-mobile";
         canvas.className = "unity-mobile";
         unityShowBanner('WebGL builds are not supported on mobile devices.');
@@ -125,29 +173,11 @@
         canvas.style.height = "1920px";
       }
 
-      loadingBar.style.display = "block";
+      // تهيئة التطبيق
+      loadUserProfile();
+      loadUnityResources();
 
-      // تحميل Unity
-      var unityInstance = null;
-      var script = document.createElement("script");
-      script.src = UNITY_CONFIG.loaderUrl;
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          progressBarFull.style.width = 100 * progress + "%";
-        }).then((instance) => {
-          unityInstance = instance;
-          loadingBar.style.display = "none";
-          fullscreenButton.onclick = () => {
-            unityInstance.SetFullscreen(1);
-          };
-          initTONWalletBridge();
-        }).catch((message) => {
-          alert(message);
-        });
-      };
-      document.body.appendChild(script);
-
-      // ========== باقي الدوال تبقى كما هي ========== //
+      // ========== TON Wallet Functions ========== //
       function initTONWalletBridge() {
         const walletAddress = urlParams.get('tonconnect');
         if (walletAddress && isValidTONAddress(walletAddress)) {
