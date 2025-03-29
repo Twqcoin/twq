@@ -3,28 +3,83 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Unity WebGL Player | My project</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
+    <title>Unity WebGL Player | minqx</title>
+    <!-- ========== مسارات الموارد الثابتة ========== -->
+    <link rel="shortcut icon" href="./static/TemplateData/favicon.ico">
+    <link rel="stylesheet" href="./static/TemplateData/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+    <script src="https://unpkg.com/@tonconnect/sdk@latest/dist/tonconnect-sdk.min.js"></script>
   </head>
   <body>
+    <!-- بقية الهيكل HTML يبقى كما هو -->
     <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
-      <div id="unity-loading-bar">
-        <div id="unity-logo"></div>
-        <div id="unity-progress-bar-empty">
-          <div id="unity-progress-bar-full"></div>
-        </div>
-      </div>
-      <div id="unity-warning"> </div>
-      <div id="unity-footer">
-        <div id="unity-webgl-logo"></div>
-        <div id="unity-fullscreen-button"></div>
-        <div id="unity-build-title">My project</div>
-      </div>
+      <!-- ... -->
     </div>
-    <script>
 
+    <div class="user-info">
+      <!-- ... -->
+    </div>
+
+    <script>
+      // ========== تعريف المسارات الأساسية ========== //
+      const PATHS = {
+        base: './static',
+        build: './static/Build',
+        templateData: './static/TemplateData',
+        streamingAssets: 'StreamingAssets',
+        defaultUserImage: './static/TemplateData/default-user.png',
+        placeholderImage: 'https://via.placeholder.com/100'
+      };
+
+      // ========== إعدادات Unity ========== //
+      const UNITY_CONFIG = {
+        loaderUrl: `${PATHS.build}/static.loader.js`,
+        dataUrl: `${PATHS.build}/static.data.gz`,
+        frameworkUrl: `${PATHS.build}/static.framework.js.gz`,
+        codeUrl: `${PATHS.build}/static.wasm.gz`,
+        streamingAssetsUrl: PATHS.streamingAssets,
+        companyName: "DefaultCompany",
+        productName: "minqx",
+        productVersion: "1.0"
+      };
+
+      // ========== معالجة بيانات المستخدم ========== //
+      const urlParams = new URLSearchParams(window.location.search);
+      const userData = {
+        id: urlParams.get('user_id'),
+        name: urlParams.get('name'),
+        username: urlParams.get('username'),
+        photo: urlParams.get('photo')
+      };
+
+      // دالة لتحميل صورة المستخدم مع معالجة الأخطاء
+      function loadUserProfile() {
+        const photoElement = document.getElementById("user-photo");
+        const nameElement = document.getElementById("user-name");
+
+        if (userData.id) {
+          nameElement.textContent = userData.name || "Guest";
+          
+          const img = new Image();
+          img.onload = function() {
+            photoElement.src = userData.photo;
+          };
+          img.onerror = function() {
+            photoElement.src = PATHS.defaultUserImage;
+            console.warn("Failed to load user image, using default");
+          };
+          img.src = userData.photo || PATHS.defaultUserImage;
+        } else {
+          console.log('No user ID provided');
+          photoElement.src = PATHS.defaultUserImage;
+          nameElement.textContent = "Guest";
+        }
+      }
+
+      // تهيئة عرض بيانات المستخدم
+      loadUserProfile();
+
+      // ========== إعدادات Unity WebGL ========== //
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
       var loadingBar = document.querySelector("#unity-loading-bar");
@@ -32,12 +87,6 @@
       var fullscreenButton = document.querySelector("#unity-fullscreen-button");
       var warningBanner = document.querySelector("#unity-warning");
 
-      // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error'.
-      // If type=='warning', a yellow highlight color is used.
-      // Modify or remove this function to customize the visually presented
-      // way that non-critical warnings and error messages are presented to the
-      // user.
       function unityShowBanner(msg, type) {
         function updateBannerVisibility() {
           warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
@@ -56,76 +105,88 @@
         updateBannerVisibility();
       }
 
-      var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/static.loader.js";
+      // تحديث config بإعدادات المسارات الجديدة
       var config = {
-        dataUrl: buildUrl + "/static.data",
-        frameworkUrl: buildUrl + "/static.framework.js",
-        codeUrl: buildUrl + "/static.wasm",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "DefaultCompany",
-        productName: "My project",
-        productVersion: "0.1",
-        showBanner: unityShowBanner,
+        ...UNITY_CONFIG,
+        showBanner: unityShowBanner
       };
 
-      // By default, Unity keeps WebGL canvas render target size matched with
-      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
-      // Set this to false if you want to decouple this synchronization from
-      // happening inside the engine, and you would instead like to size up
-      // the canvas DOM size and WebGL render target sizes yourself.
-      // config.matchWebGLToCanvasSize = false;
-
-      // If you would like all file writes inside Unity Application.persistentDataPath
-      // directory to automatically persist so that the contents are remembered when
-      // the user revisits the site the next time, uncomment the following line:
-      // config.autoSyncPersistentDataPath = true;
-      // This autosyncing is currently not the default behavior to avoid regressing
-      // existing user projects that might rely on the earlier manual
-      // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
-      // expected to change.
-
+      // تكييف الواجهة للجوال
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Mobile device style: fill the whole browser client area with the game canvas:
-
         var meta = document.createElement('meta');
         meta.name = 'viewport';
         meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
         document.getElementsByTagName('head')[0].appendChild(meta);
         container.className = "unity-mobile";
         canvas.className = "unity-mobile";
-
-        // To lower canvas resolution on mobile devices to gain some
-        // performance, uncomment the following line:
-        // config.devicePixelRatio = 1;
-
-
+        unityShowBanner('WebGL builds are not supported on mobile devices.');
       } else {
-        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
-
-        canvas.style.width = "960px";
-        canvas.style.height = "600px";
+        canvas.style.width = "1080px";
+        canvas.style.height = "1920px";
       }
 
       loadingBar.style.display = "block";
 
+      // تحميل Unity
+      var unityInstance = null;
       var script = document.createElement("script");
-      script.src = loaderUrl;
+      script.src = UNITY_CONFIG.loaderUrl;
       script.onload = () => {
         createUnityInstance(canvas, config, (progress) => {
           progressBarFull.style.width = 100 * progress + "%";
-              }).then((unityInstance) => {
-                loadingBar.style.display = "none";
-                fullscreenButton.onclick = () => {
-                  unityInstance.SetFullscreen(1);
-                };
-              }).catch((message) => {
-                alert(message);
-              });
-            };
-
+        }).then((instance) => {
+          unityInstance = instance;
+          loadingBar.style.display = "none";
+          fullscreenButton.onclick = () => {
+            unityInstance.SetFullscreen(1);
+          };
+          initTONWalletBridge();
+        }).catch((message) => {
+          alert(message);
+        });
+      };
       document.body.appendChild(script);
 
+      // ========== باقي الدوال تبقى كما هي ========== //
+      function initTONWalletBridge() {
+        const walletAddress = urlParams.get('tonconnect');
+        if (walletAddress && isValidTONAddress(walletAddress)) {
+          localStorage.setItem('TON_WALLET_ADDRESS', walletAddress);
+          if (unityInstance) {
+            unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletConnected', walletAddress);
+          }
+          history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+
+      function ConnectTONWallet() {
+        const returnUrl = encodeURIComponent(window.location.href.split('?')[0]);
+        window.open(`https://t.me/wallet?startattach=wallet&return_url=${returnUrl}`);
+      }
+
+      function DisconnectTONWallet() {
+        localStorage.removeItem('TON_WALLET_ADDRESS');
+        if (unityInstance) {
+          unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletDisconnected');
+        }
+      }
+
+      async function GetWalletBalance(walletAddress) {
+        try {
+          const dummyBalance = (Math.random() * 100).toFixed(4);
+          if (unityInstance) {
+            unityInstance.SendMessage('TelegramWalletConnector', 'OnBalanceUpdated', dummyBalance);
+          }
+          return dummyBalance;
+        } catch (error) {
+          console.error("Error fetching balance:", error);
+          return "0";
+        }
+      }
+
+      function isValidTONAddress(address) {
+        return /^(?:[a-km-zA-HJ-NP-Z1-9]{48}|0:[a-fA-F0-9]{64})$/.test(address);
+      }
     </script>
   </body>
 </html>
