@@ -46,7 +46,7 @@
     </div>
 
     <script>
-      // ========== نظام إدارة الأخطاء ==========
+      // ========== نظام إدارة الأخطاء ========== 
       const ErrorHandler = {
         showError: function(message) {
           console.error('Error:', message);
@@ -62,7 +62,7 @@
         }
       };
 
-      // ========== نظام إدارة التطبيق ==========
+      // ========== نظام إدارة التطبيق ========== 
       const App = {
         unityInstance: null,
         connector: null,
@@ -181,7 +181,6 @@
           });
         },
         
-        // ... [بقية الدوال كما هي بدون تغيير] ...
         loadUserProfile: function() {
           const urlParams = new URLSearchParams(window.location.search);
           const userData = {
