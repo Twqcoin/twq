@@ -27,7 +27,9 @@
         <div id="unity-build-title">minqx</div>
       </div>
     </div>
+    
     <script>
+      // جلب العناصر من الـ HTML
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
       var loadingBar = document.querySelector("#unity-loading-bar");
@@ -35,6 +37,7 @@
       var fullscreenButton = document.querySelector("#unity-fullscreen-button");
       var warningBanner = document.querySelector("#unity-warning");
 
+      // دالة لعرض التنبيهات
       function unityShowBanner(msg, type) {
         function updateBannerVisibility() {
           warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
@@ -144,13 +147,41 @@
 
       // بدء التحميل بعد تأكد تحميل الصفحة
       window.addEventListener('load', loadUnity);
-      
-      // طباعة معلومات المسارات لتصحيح الأخطاء
-      console.log("Unity Path Configuration:", {
-        buildPath: buildUrl,
-        loaderPath: loaderUrl,
-        config: config
-      });
+
+      // دوال JavaScript الخاصة بمحفظة TON
+      function ConnectTONWallet() {
+          if (window.TonConnect) {
+              const tonConnect = new TonConnect({
+                  network: 'mainnet', // أو 'testnet' إذا كنت تستخدم الشبكة التجريبية
+              });
+
+              tonConnect.connect().then(wallet => {
+                  console.log('تم الاتصال بمحفظة TON:', wallet.address);
+                  // إرسال العنوان إلى Unity
+                  SendWalletAddressToUnity(wallet.address);
+              }).catch(error => {
+                  console.error('فشل الاتصال بمحفظة TON:', error);
+              });
+          } else {
+              console.error('مكتبة TON غير موجودة');
+          }
+      }
+
+      function SendWalletAddressToUnity(address) {
+          if (window.unityInstance) {
+              window.unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletConnected', address);
+          }
+      }
+
+      function DisconnectTONWallet() {
+          // منطق فصل الاتصال بمحفظة TON
+          console.log('تم فصل الاتصال بمحفظة TON');
+      }
+
+      function GetWalletBalance() {
+          console.log('جلب رصيد المحفظة...');
+          // منطق جلب الرصيد
+      }
     </script>
   </body>
 </html>
