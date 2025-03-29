@@ -41,94 +41,143 @@
       <h2 id="user-name"></h2>
     </div>
 
-    <!-- تحميل TonConnect SDK -->
-    <script src="https://unpkg.com/@tonconnect/sdk@2.1.1/dist/tonconnect-sdk.min.js"></script>
-    
     <script>
-      // ========== نظام إدارة التطبيق ==========
+      // ========== نظام إدارة التطبيق المحسن ==========
       const App = {
         unityInstance: null,
         connector: null,
-        
-        init: function() {
-          this.checkDependencies()
-            .then(() => this.setupTonConnect())
-            .then(() => this.setupUnity())
-            .then(() => this.loadUserProfile())
-            .catch(error => {
-              console.error('Application initialization failed:', error);
-              this.showError('Failed to initialize application');
-            });
+        dependencies: {
+          loaded: {
+            TonConnect: false,
+            Unity: false
+          },
+          required: ['TonConnect', 'Unity']
         },
         
-        // ========== التحقق من المكتبات المطلوبة ==========
-        checkDependencies: function() {
+        // ========== تهيئة التطبيق ==========
+        init: async function() {
+          try {
+            await this.loadDependencies();
+            await this.setupTonConnect();
+            await this.setupUnity();
+            this.loadUserProfile();
+            this.exposeToUnity();
+          } catch (error) {
+            console.error('Application initialization failed:', error);
+            this.showError('Failed to initialize application. Please refresh the page.');
+          }
+        },
+        
+        // ========== نظام تحميل التبعيات المحسن ==========
+        loadDependencies: function() {
           return new Promise((resolve, reject) => {
-            if (typeof TonConnect === 'undefined') {
+            // تحميل TonConnect SDK أولاً
+            this.loadScript('https://unpkg.com/@tonconnect/sdk@2.1.1/dist/tonconnect-sdk.min.js', 'TonConnect')
+              .then(() => resolve())
+              .catch(error => {
+                console.error('Failed to load TonConnect SDK:', error);
+                reject(new Error('Failed to load required resources'));
+              });
+          });
+        },
+        
+        // دالة محسنة لتحميل السكريبتات
+        loadScript: function(src, dependencyName, retries = 3, interval = 1000) {
+          return new Promise((resolve, reject) => {
+            let attempts = 0;
+            
+            const tryLoad = () => {
+              attempts++;
+              const script = document.createElement('script');
+              script.src = src;
+              
+              script.onload = () => {
+                console.log(`Successfully loaded ${dependencyName}`);
+                this.dependencies.loaded[dependencyName] = true;
+                resolve();
+              };
+              
+              script.onerror = () => {
+                if (attempts < retries) {
+                  console.warn(`Retrying ${dependencyName} (${attempts}/${retries})...`);
+                  setTimeout(tryLoad, interval);
+                } else {
+                  reject(new Error(`Failed to load ${dependencyName} after ${retries} attempts`));
+                }
+              };
+              
+              document.body.appendChild(script);
+            };
+            
+            tryLoad();
+          });
+        },
+        
+        // ========== تهيئة TonConnect مع التحقق من التحميل ==========
+        setupTonConnect: function() {
+          return new Promise((resolve, reject) => {
+            if (!this.dependencies.loaded.TonConnect) {
               reject(new Error('TonConnect SDK not loaded'));
               return;
             }
-            resolve();
-          });
-        },
-        
-        // ========== تهيئة TonConnect ==========
-        setupTonConnect: function() {
-          this.connector = new TonConnect.TonConnect({
-            manifestUrl: 'https://yourdomain.com/tonconnect-manifest.json'
-          });
-          
-          // استعادة حالة المحفظة إذا كانت متصلة سابقاً
-          const walletConnectionSource = { jsBridgeKey: 'tonconnect' };
-          this.connector.restoreConnection(walletConnectionSource);
-        },
-        
-        // ========== إعدادات Unity ==========
-        setupUnity: function() {
-          const PATHS = {
-            base: './static',
-            build: './static/Build',
-            templateData: './static/TemplateData',
-            streamingAssets: 'StreamingAssets',
-            defaultUserImage: './static/TemplateData/default-user.png',
-            placeholderImage: 'https://via.placeholder.com/100'
-          };
-          
-          const UNITY_CONFIG = {
-            loaderUrl: `${PATHS.build}/minqx.loader.js`,
-            dataUrl: `${PATHS.build}/minqx.data`,
-            frameworkUrl: `${PATHS.build}/minqx.framework.js`,
-            codeUrl: `${PATHS.build}/minqx.wasm`,
-            streamingAssetsUrl: PATHS.streamingAssets,
-            companyName: "DefaultCompany",
-            productName: "minqx",
-            productVersion: "1.0"
-          };
-          
-          return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = UNITY_CONFIG.loaderUrl;
             
-            script.onload = () => {
-              createUnityInstance(document.querySelector("#unity-canvas"), {
-                ...UNITY_CONFIG,
-                showBanner: this.showBanner.bind(this)
-              }, (progress) => {
-                document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
-              }).then(instance => {
-                this.unityInstance = instance;
-                document.querySelector("#unity-fullscreen-button").onclick = () => 
-                  instance.SetFullscreen(1);
-                resolve();
-              }).catch(reject);
+            try {
+              this.connector = new TonConnect.TonConnect({
+                manifestUrl: 'https://yourdomain.com/tonconnect-manifest.json'
+              });
+              
+              // استعادة الاتصال إذا كان موجوداً
+              const walletConnectionSource = { jsBridgeKey: 'tonconnect' };
+              this.connector.restoreConnection(walletConnectionSource);
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          });
+        },
+        
+        // ========== إعدادات Unity مع نظام تحميل محسن ==========
+        setupUnity: function() {
+          return new Promise((resolve, reject) => {
+            const PATHS = {
+              base: './static',
+              build: './static/Build',
+              templateData: './static/TemplateData',
+              streamingAssets: 'StreamingAssets',
+              defaultUserImage: './static/TemplateData/default-user.png',
+              placeholderImage: 'https://via.placeholder.com/100'
             };
             
-            script.onerror = () => reject(new Error('Failed to load Unity script'));
-            document.body.appendChild(script);
+            const UNITY_CONFIG = {
+              loaderUrl: `${PATHS.build}/minqx.loader.js`,
+              dataUrl: `${PATHS.build}/minqx.data`,
+              frameworkUrl: `${PATHS.build}/minqx.framework.js`,
+              codeUrl: `${PATHS.build}/minqx.wasm`,
+              streamingAssetsUrl: PATHS.streamingAssets,
+              companyName: "DefaultCompany",
+              productName: "minqx",
+              productVersion: "1.0"
+            };
+            
+            this.loadScript(UNITY_CONFIG.loaderUrl, 'Unity')
+              .then(() => {
+                createUnityInstance(document.querySelector("#unity-canvas"), {
+                  ...UNITY_CONFIG,
+                  showBanner: this.showBanner.bind(this)
+                }, (progress) => {
+                  document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
+                }).then(instance => {
+                  this.unityInstance = instance;
+                  document.querySelector("#unity-fullscreen-button").onclick = () => 
+                    instance.SetFullscreen(1);
+                  resolve();
+                }).catch(reject);
+              })
+              .catch(reject);
           });
         },
         
-        // ========== معالجة بيانات المستخدم ==========
+        // ========== وظائف التطبيق الأساسية ==========
         loadUserProfile: function() {
           const urlParams = new URLSearchParams(window.location.search);
           const userData = {
@@ -154,35 +203,44 @@
           img.src = url;
         },
         
-        // ========== وظائف محفظة TON ==========
+        // ========== وظائف محفظة TON مع التحقق من التهيئة ==========
         connectTONWallet: function() {
           if (!this.connector) {
-            console.error('TonConnect not initialized');
+            this.showError('Wallet service not initialized');
             return;
           }
           
-          const walletConnectionSource = { jsBridgeKey: 'tonconnect' };
-          const connectUrl = this.connector.connect(walletConnectionSource);
-          
-          window.open(connectUrl, '_blank');
-          
-          this.connector.onStatusChange(wallet => {
-            if (wallet) {
-              localStorage.setItem('TON_WALLET_ADDRESS', wallet.account.address);
-              if (this.unityInstance) {
-                this.unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletConnected', wallet.account.address);
+          try {
+            const walletConnectionSource = { jsBridgeKey: 'tonconnect' };
+            const connectUrl = this.connector.connect(walletConnectionSource);
+            
+            window.open(connectUrl, '_blank');
+            
+            this.connector.onStatusChange(wallet => {
+              if (wallet) {
+                localStorage.setItem('TON_WALLET_ADDRESS', wallet.account.address);
+                if (this.unityInstance) {
+                  this.unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletConnected', wallet.account.address);
+                }
               }
-            }
-          });
+            });
+          } catch (error) {
+            console.error('Wallet connection error:', error);
+            this.showError('Failed to connect wallet');
+          }
         },
         
         disconnectTONWallet: function() {
-          if (this.connector) {
+          if (!this.connector) return;
+          
+          try {
             this.connector.disconnect();
             localStorage.removeItem('TON_WALLET_ADDRESS');
             if (this.unityInstance) {
               this.unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletDisconnected');
             }
+          } catch (error) {
+            console.error('Wallet disconnection error:', error);
           }
         },
         
@@ -201,6 +259,8 @@
         // ========== أدوات مساعدة ==========
         showBanner: function(msg, type) {
           const warningBanner = document.querySelector("#unity-warning");
+          if (!warningBanner) return;
+          
           const div = document.createElement('div');
           div.innerHTML = msg;
           
@@ -208,7 +268,11 @@
             div.style = 'background: red; padding: 10px;';
           } else if (type === 'warning') {
             div.style = 'background: yellow; padding: 10px;';
-            setTimeout(() => warningBanner.removeChild(div), 5000);
+            setTimeout(() => {
+              if (warningBanner.contains(div)) {
+                warningBanner.removeChild(div);
+              }
+            }, 5000);
           }
           
           warningBanner.appendChild(div);
@@ -219,12 +283,30 @@
           this.showBanner(message, 'error');
         },
         
-        // جعل الدوال متاحة لـ Unity
+        // جعل الدوال متاحة لـ Unity مع التحقق من التهيئة
         exposeToUnity: function() {
           window.TON = {
-            connectWallet: this.connectTONWallet.bind(this),
-            disconnectWallet: this.disconnectTONWallet.bind(this),
-            getBalance: this.getWalletBalance.bind(this)
+            connectWallet: () => {
+              if (this.dependencies.loaded.TonConnect) {
+                this.connectTONWallet();
+              } else {
+                this.showError('Wallet service not ready');
+              }
+            },
+            disconnectWallet: () => {
+              if (this.dependencies.loaded.TonConnect) {
+                this.disconnectTONWallet();
+              }
+            },
+            getBalance: async (walletAddress) => {
+              if (this.dependencies.loaded.TonConnect) {
+                return await this.getWalletBalance(walletAddress);
+              }
+              return "0";
+            },
+            isReady: () => {
+              return this.dependencies.loaded.TonConnect && this.unityInstance !== null;
+            }
           };
         }
       };
@@ -243,10 +325,7 @@
       }
       
       // بدء التطبيق عند اكتمال تحميل الصفحة
-      document.addEventListener('DOMContentLoaded', function() {
-        App.exposeToUnity();
-        App.init();
-      });
+      document.addEventListener('DOMContentLoaded', () => App.init());
     </script>
   </body>
 </html>
