@@ -49,6 +49,27 @@ def get_photo_url(file_id):
         return f"https://api.telegram.org/file/bot{token}/{file_path}"
     return None
 
+# وظيفة لإنشاء الجدول إذا لم يكن موجودًا
+def create_players_table():
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS players (
+                        id SERIAL PRIMARY KEY,
+                        name VARCHAR(255),
+                        image_url VARCHAR(255),
+                        progress INT
+                    )
+                ''')
+                conn.commit()
+                logger.info("Players table created successfully.")
+        except Exception as e:
+            logger.error(f"Error creating table: {e}", exc_info=True)
+        finally:
+            conn.close()
+
 # مسار لعرض الصفحة الرئيسية من مجلد static
 @app.route('/')
 def home():
@@ -57,18 +78,21 @@ def home():
 # مسار لمعالجة الويب هوك (Webhook)
 @app.route('/webhook', methods=['POST'])
 def webhook():
+    create_players_table()  # إنشاء الجدول إذا لم يكن موجودًا
+
     data = request.get_json()
     logger.info(f"Received data: {data}")
     try:
-        # التأكد من وجود الحقول المطلوبة
-        if 'name' not in data or 'age' not in data:
-            return jsonify({"error": "Invalid data format, 'name' and 'age' are required"}), 400
-        
-        name = data['name']
-        age = data['age']
+        if 'message' not in data or 'from' not in data['message']:
+            return jsonify({"error": "Invalid data format"}), 400
 
-        # افترض صورة افتراضية بما أن الصورة لم تذكر
-        photo_url = "default-avatar.png"
+        user_id = data['message']['from']['id']
+        name = data['message']['from'].get('first_name', 'Unknown')
+        username = data['message']['from'].get('username', 'Unknown')
+        photo = data['message'].get('photo', None)
+
+        # الحصول على رابط الصورة الفعلي
+        photo_url = get_photo_url(photo[0]['file_id']) if photo else "default-avatar.png"
 
         # حفظ البيانات في قاعدة البيانات
         conn = get_db_connection()
