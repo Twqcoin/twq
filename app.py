@@ -1,9 +1,10 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, render_template
 from dotenv import load_dotenv
 import psycopg2
 from urllib.parse import urlparse
 import logging
+import requests
 
 # تحميل المتغيرات البيئية
 load_dotenv()
@@ -38,25 +39,20 @@ def get_db_connection():
         logger.error(f"Failed to connect to the database: {e}", exc_info=True)
         return None
 
+# دالة لتحميل الصورة عبر Telegram API باستخدام file_id
+def get_photo_url(file_id):
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    url = f"https://api.telegram.org/bot{token}/getFile?file_id={file_id}"
+    response = requests.get(url)
+    file_path = response.json().get("result", {}).get("file_path", "")
+    if file_path:
+        return f"https://api.telegram.org/file/bot{token}/{file_path}"
+    return None
+
 # مسار لعرض الصفحة الرئيسية من مجلد static
 @app.route('/')
 def home():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')
-
-# مسار لتحميل الملفات من مجلد Build
-@app.route('/static/Build/<path:filename>')
-def serve_build_files(filename):
-    return send_from_directory(os.path.join(app.root_path, 'static', 'Build'), filename)
-
-# مسار لتحميل style.css من مجلد TemplateData
-@app.route('/static/TemplateData/style.css')
-def style():
-    return send_from_directory(os.path.join(app.root_path, 'static', 'TemplateData'), 'style.css')
-
-# مسار لتحميل favicon.ico من مجلد TemplateData
-@app.route('/static/TemplateData/favicon.ico')
-def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static', 'TemplateData'), 'favicon.ico')
 
 # مسار لمعالجة الويب هوك (Webhook)
 @app.route('/webhook', methods=['POST'])
@@ -69,34 +65,30 @@ def webhook():
         username = data['message']['from'].get('username', 'Unknown')
         photo = data['message'].get('photo', None)
 
+        # الحصول على رابط الصورة الفعلي
+        photo_url = get_photo_url(photo[0]['file_id']) if photo else "default-avatar.png"
+
+        # حفظ البيانات في قاعدة البيانات
         conn = get_db_connection()
         if conn:
             with conn.cursor() as cursor:
                 cursor.execute("INSERT INTO players (name, image_url, progress) VALUES (%s, %s, %s)",
-                               (name, photo[0]['file_id'] if photo else "default-avatar.png", 0))
+                               (name, photo_url, 0))
                 conn.commit()
+            conn.close()
 
         # تمرير البيانات إلى صفحة HTML
         player_data = {
             'name': name,
-            'photo_url': photo[0]['file_id'] if photo else "default-avatar.png"
+            'photo_url': photo_url
         }
 
         # عرض index.html مع تمرير البيانات
-        return send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')
+        return render_template('index.html', player_data=player_data)
 
     except Exception as e:
         logger.error(f"An error occurred: {e}", exc_info=True)
         return jsonify({"error": "An error occurred while processing the data."}), 500
-
-# مسار للحصول على بيانات اللاعب
-@app.route('/get_player_info', methods=['GET'])
-def get_player_info():
-    player_data = {
-        'name': "Player Name",
-        'photo_url': "https://example.com/path/to/photo.png"  # Replace with actual URL
-    }
-    return jsonify(player_data)
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5001)))
