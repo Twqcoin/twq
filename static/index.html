@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+هاذا الكود القديم احفض مسار الملفات لكي تضيفها الى الكود الجيد الذي سارسله لك  احفض هاذه المسارت في الكود  <!DOCTYPE html>
 <html lang="en-us">
   <head>
     <meta charset="utf-8">
@@ -7,17 +7,16 @@
     <meta http-equiv="Access-Control-Allow-Origin" content="*">
     <meta http-equiv="Cross-Origin-Opener-Policy" content="unsafe-none">
     <meta http-equiv="Cross-Origin-Embedder-Policy" content="unsafe-none">
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
-    
-    <!-- مكتبات TON و Telegram -->
-    <script src="tonconnect-sdk.min.js"></script>
-    <script src="ton-connect.js"></script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="shortcut icon" href="static/TemplateData/favicon.ico">
+    <link rel="stylesheet" href="static/TemplateData/style.css">
+
+    <!-- إضافة مكتبة TON Connect من المسار المحلي -->
+    <script src="static/tonconnect-sdk.min.js"></script>
+    <script type="module" src="static/ton-connect.js" id="ton-connect-script"></script>
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
+      <canvas id="unity-canvas" width="960" height="600" tabindex="-1"></canvas>
       <div id="unity-loading-bar">
         <div id="unity-logo"></div>
         <div id="unity-progress-bar-empty">
@@ -32,8 +31,20 @@
       </div>
     </div>
 
+    <!-- زر الاتصال بمحفظة TON -->
+    <button id="connectWalletButton">🔗 Connect Wallet</button>
+
     <script>
-      // === العناصر الأساسية === //
+      // التأكد من تحميل مكتبة TON
+      function loadTONConnect() {
+        if (window.TonConnect) {
+          console.log("مكتبة TON تم تحميلها بنجاح.");
+        } else {
+          console.error("مكتبة TON غير موجودة.");
+        }
+      }
+
+      // جلب العناصر من الـ HTML
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
       var loadingBar = document.querySelector("#unity-loading-bar");
@@ -41,27 +52,7 @@
       var fullscreenButton = document.querySelector("#unity-fullscreen-button");
       var warningBanner = document.querySelector("#unity-warning");
 
-      // === إعدادات المسارات المحدثة === //
-      var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/static.loader.js";
-      var config = {
-        dataUrl: buildUrl + "/static.data.br",
-        frameworkUrl: buildUrl + "/static.framework.js.br",
-        codeUrl: buildUrl + "/static.wasm.br",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "DefaultCompany",
-        productName: "minqx",
-        productVersion: "0.1",
-        showBanner: unityShowBanner,
-        webglContextAttributes: {
-          preserveDrawingBuffer: false,
-          antialias: false
-        }
-      };
-
-      // === دوال JavaScript المحدثة === //
-      var unityInstance = null;
-
+      // دالة لعرض التنبيهات
       function unityShowBanner(msg, type) {
         function updateBannerVisibility() {
           warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
@@ -80,98 +71,123 @@
         updateBannerVisibility();
       }
 
-      function ConnectTONWallet() {
-        if (window.TonConnect) {
-          const connector = new TonConnect.TonConnect({
-            manifestUrl: 'https://yourdomain.com/tonconnect-manifest.json'
-          });
-          
-          connector.connect().then(wallet => {
-            if (unityInstance) {
-              unityInstance.SendMessage(
-                'TelegramWalletConnector', 
-                'OnWalletConnected', 
-                wallet.account.address
-              );
-            }
-          });
-        }
-      }
+      // ========== إعدادات المسارات المعدلة ========== //
+      var buildUrl = "static/Build";
+      var loaderUrl = buildUrl + "/static.loader.js";
+      var config = {
+        dataUrl: buildUrl + "/static.data.br",
+        frameworkUrl: buildUrl + "/static.framework.js.br",
+        codeUrl: buildUrl + "/static.wasm.br",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "minqx",
+        productVersion: "0.1",
+        showBanner: unityShowBanner,
+        decompressionFallback: true,
+        webglContextAttributes: {
+          preserveDrawingBuffer: false,
+          antialias: false
+        },
+        compatibilityMode: false
+      };
 
-      function DisconnectTONWallet() {
-        if (window.TonConnect) {
-          const connector = new TonConnect.TonConnect();
-          connector.disconnect();
-          if (unityInstance) {
-            unityInstance.SendMessage(
-              'TelegramWalletConnector', 
-              'OnWalletDisconnected', 
-              ''
-            );
-          }
-        }
-      }
-
-      function ExpandWebApp() {
-        try {
-          if (typeof Telegram !== 'undefined') {
-            Telegram.WebApp.expand();
-            return 1;
-          }
-          return 0;
-        } catch(e) {
-          console.error("Expand error:", e);
-          return -1;
-        }
-      }
-
-      // === تهيئة Unity === //
-      function loadUnity() {
-        var script = document.createElement("script");
-        script.src = loaderUrl;
-        
-        script.onload = function() {
-          createUnityInstance(canvas, config, function(progress) {
-            progressBarFull.style.width = 100 * progress + "%";
-          }).then(function(instance) {
-            unityInstance = instance;
-            loadingBar.style.display = "none";
-            fullscreenButton.onclick = function() {
-              instance.SetFullscreen(1);
-            };
-
-            // تهيئة Telegram WebApp بعد تحميل Unity
-            if (typeof Telegram !== 'undefined') {
-              Telegram.WebApp.ready();
-              Telegram.WebApp.expand();
-            }
-          }).catch(function(message) {
-            alert(message);
-          });
-        };
-        
-        script.onerror = function() {
-          unityShowBanner("فشل تحميل ملفات Unity اللازمة", 'error');
-        };
-        
-        document.body.appendChild(script);
-      }
-
-      // === تحسينات للجوال === //
+      // ========== تحسينات للجوال ========== //
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         var meta = document.createElement('meta');
         meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes, maximum-scale=1.0';
         document.getElementsByTagName('head')[0].appendChild(meta);
         container.className = "unity-mobile";
         canvas.className = "unity-mobile";
+        config.devicePixelRatio = 1;
       } else {
         canvas.style.width = "960px";
         canvas.style.height = "600px";
       }
 
-      // بدء التحميل عند اكتمال الصفحة
-      window.addEventListener('load', loadUnity);
+      // ========== نظام تحميل محسن ========== //
+      loadingBar.style.display = "block";
+      
+      function loadUnity() {
+        var script = document.createElement("script");
+        script.src = loaderUrl;
+        
+        script.onerror = function(error) {
+          var errorMsg = `فشل تحميل Unity!<br><br><b>الخطأ:</b> ${error.message}<br><br>
+            <b>الحلول المقترحة:</b><br>1. تحديث المتصفح<br>2. تفعيل WebAssembly في إعدادات المتصفح<br>3. التأكد من دعم السيرفر لملفات .br`;
+          unityShowBanner(errorMsg, 'error');
+          console.error("Error loading:", error);
+        };
+
+        script.onload = function() {
+          if (typeof createUnityInstance === 'undefined') {
+            unityShowBanner("فشل تحميل المحمل الخاص بـ Unity!", 'error');
+            return;
+          }
+          
+          createUnityInstance(canvas, config, function(progress) {
+            progressBarFull.style.width = 100 * progress + "%";
+          }).then(function(unityInstance) {
+            loadingBar.style.display = "none";
+            fullscreenButton.onclick = function() {
+              unityInstance.SetFullscreen(1);
+            };
+          }).catch(function(error) {
+            var errorDetails = `فشل تشغيل اللعبة!<br><br><b>الخطأ:</b> ${error.message}<br><br>
+              <b>الحلول المقترحة:</b><br>1. تحديث المتصفح<br>2. تفعيل WebAssembly في إعدادات المتصفح<br>3. التأكد من دعم السيرفر لملفات .br`;
+            unityShowBanner(errorDetails, 'error');
+            console.error("Unity initialization failed:", error);
+          });
+        };
+
+        document.body.appendChild(script);
+      }
+
+      // بدء التحميل بعد تأكد تحميل الصفحة
+      window.addEventListener('load', function() {
+        loadTONConnect(); // التأكد من تحميل مكتبة TON
+        loadUnity(); // بدء تحميل Unity بعد التأكد من تحميل الصفحة
+      });
+
+      // دوال JavaScript الخاصة بمحفظة TON
+      function ConnectTONWallet() {
+          if (window.TonConnect) {
+              const tonConnect = new TonConnect({
+                  network: 'mainnet', // أو 'testnet' إذا كنت تستخدم الشبكة التجريبية
+              });
+
+              tonConnect.connect().then(wallet => {
+                  console.log('تم الاتصال بمحفظة TON:', wallet.address);
+                  // إرسال العنوان إلى Unity
+                  SendWalletAddressToUnity(wallet.address);
+              }).catch(error => {
+                  console.error('فشل الاتصال بمحفظة TON:', error);
+              });
+          } else {
+              console.error('مكتبة TON غير موجودة');
+          }
+      }
+
+      function SendWalletAddressToUnity(address) {
+          if (window.unityInstance) {
+              window.unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletConnected', address);
+          }
+      }
+
+      function DisconnectTONWallet() {
+          // منطق فصل الاتصال بمحفظة TON
+          console.log('تم فصل الاتصال بمحفظة TON');
+      }
+
+      function GetWalletBalance() {
+          console.log('جلب رصيد المحفظة...');
+          // منطق جلب الرصيد
+      }
+
+      // ربط الزر الخاص بالاتصال بالمحفظة
+      document.getElementById("connectWalletButton").addEventListener("click", function() {
+        ConnectTONWallet(); // استدعاء دالة الاتصال بالمحفظة عند الضغط على الزر
+      });
     </script>
   </body>
 </html>
