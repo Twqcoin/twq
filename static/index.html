@@ -35,22 +35,12 @@
     <button id="connectWalletButton">🔗 Connect Wallet</button>
 
     <script>
-      // التأكد من تحميل مكتبة TON
-      function loadTONConnect() {
-        if (window.TonConnect) {
-          console.log("مكتبة TON تم تحميلها بنجاح.");
-        } else {
-          console.error("مكتبة TON غير موجودة.");
-        }
-      }
-
-      // إعدادات المسارات المعدلة
       var buildUrl = "/static/Build";
-      var loaderUrl = buildUrl + "/static.loader.js";
+      var loaderUrl = buildUrl + "/build.loader.js";
       var config = {
-        dataUrl: buildUrl + "/static.data.br",
-        frameworkUrl: buildUrl + "/static.framework.js.br",
-        codeUrl: buildUrl + "/static.wasm.br",
+        dataUrl: buildUrl + "/build.data.br",
+        frameworkUrl: buildUrl + "/build.framework.js.br",
+        codeUrl: buildUrl + "/build.wasm.br",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "DefaultCompany",
         productName: "minqx",
@@ -69,18 +59,10 @@
         script.src = loaderUrl;
         
         script.onerror = function(error) {
-          var errorMsg = `فشل تحميل Unity!<br><br><b>الخطأ:</b> ${error.message}<br><br>
-            <b>الحلول المقترحة:</b><br>1. تحديث المتصفح<br>2. تفعيل WebAssembly في إعدادات المتصفح<br>3. التأكد من دعم السيرفر لملفات .br`;
-          unityShowBanner(errorMsg, 'error');
           console.error("Error loading:", error);
         };
 
         script.onload = function() {
-          if (typeof createUnityInstance === 'undefined') {
-            unityShowBanner("فشل تحميل المحمل الخاص بـ Unity!", 'error');
-            return;
-          }
-          
           createUnityInstance(canvas, config, function(progress) {
             progressBarFull.style.width = 100 * progress + "%";
           }).then(function(unityInstance) {
@@ -89,9 +71,6 @@
               unityInstance.SetFullscreen(1);
             };
           }).catch(function(error) {
-            var errorDetails = `فشل تشغيل اللعبة!<br><br><b>الخطأ:</b> ${error.message}<br><br>
-              <b>الحلول المقترحة:</b><br>1. تحديث المتصفح<br>2. تفعيل WebAssembly في إعدادات المتصفح<br>3. التأكد من دعم السيرفر لملفات .br`;
-            unityShowBanner(errorDetails, 'error');
             console.error("Unity initialization failed:", error);
           });
         };
@@ -100,9 +79,9 @@
       }
 
       window.addEventListener('load', function() {
-        loadTONConnect();
         loadUnity();
       });
+
     </script>
   </body>
 </html>
