@@ -11,7 +11,7 @@
     <link rel="shortcut icon" href="static/TemplateData/favicon.ico">
     <link rel="stylesheet" href="static/TemplateData/style.css">
     <!-- إضافة مكتبة TON Connect -->
-    <script src="https://cdn.tonhubapi.com/ton-connect.js"></script>
+    <script src="https://cdn.tonhubapi.com/ton-connect.js" id="ton-connect-script"></script>
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
@@ -34,6 +34,15 @@
     <button id="connectWalletButton">🔗 Connect Wallet</button>
 
     <script>
+      // التأكد من تحميل مكتبة TON
+      function loadTONConnect() {
+        if (window.TonConnect) {
+          console.log("مكتبة TON تم تحميلها بنجاح.");
+        } else {
+          console.error("مكتبة TON غير موجودة.");
+        }
+      }
+
       // جلب العناصر من الـ HTML
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
@@ -140,7 +149,10 @@
       }
 
       // بدء التحميل بعد تأكد تحميل الصفحة
-      window.addEventListener('load', loadUnity);
+      window.addEventListener('load', function() {
+        loadTONConnect(); // التأكد من تحميل مكتبة TON
+        loadUnity(); // بدء تحميل Unity بعد التأكد من تحميل الصفحة
+      });
 
       // دوال JavaScript الخاصة بمحفظة TON
       function ConnectTONWallet() {
