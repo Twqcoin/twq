@@ -181,13 +181,34 @@
       }
 
       function DisconnectTONWallet() {
-          // منطق فصل الاتصال بمحفظة TON
           console.log('تم فصل الاتصال بمحفظة TON');
+          if (window.unityInstance) {
+              window.unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletConnected', '');
+          }
       }
 
       function GetWalletBalance() {
           console.log('جلب رصيد المحفظة...');
-          // منطق جلب الرصيد
+          // منطق جلب الرصيد (اختياري)
+          if (window.TonConnect) {
+              const tonConnect = new TonConnect({
+                  network: 'mainnet',
+              });
+
+              tonConnect.getBalance().then(balance => {
+                  console.log('رصيد المحفظة:', balance);
+                  // إرسال الرصيد إلى Unity
+                  SendWalletBalanceToUnity(balance);
+              }).catch(error => {
+                  console.error('فشل جلب رصيد المحفظة:', error);
+              });
+          }
+      }
+
+      function SendWalletBalanceToUnity(balance) {
+          if (window.unityInstance) {
+              window.unityInstance.SendMessage('TelegramWalletConnector', 'OnBalanceUpdated', balance);
+          }
       }
 
       // ربط الزر الخاص بالاتصال بالمحفظة
