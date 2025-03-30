@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory, render_template
+from flask import Flask, request, jsonify, send_from_directory
 from dotenv import load_dotenv
 import psycopg2
 from urllib.parse import urlparse
@@ -113,14 +113,14 @@ def webhook():
             finally:
                 conn.close()
 
-        # تمرير البيانات إلى صفحة HTML
+        # تمرير البيانات إلى صفحة HTML (إذا كنت بحاجة لذلك)
         player_data = {
             'name': name,
             'photo_url': photo_url
         }
 
-        # عرض الصفحة من مجلد static
-        return send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')
+        # الرد بـ JSON بدلاً من توجيه الصفحة
+        return jsonify({"status": "success", "message": "Data processed successfully", "player_data": player_data})
 
     except Exception as e:
         logger.error(f"An error occurred while processing the data: {e}", exc_info=True)
