@@ -34,19 +34,6 @@ def get_db_connection():
             port=result.port or 5432
         )
         logger.info("Successfully connected to the database.")
-        
-        # إنشاء الجدول إذا لم يكن موجودًا
-        with conn.cursor() as cursor:
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS players (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(100),
-                    image_url TEXT,
-                    progress INTEGER DEFAULT 0
-                );
-            """)
-            conn.commit()
-        
         return conn
     except Exception as e:
         logger.error(f"Failed to connect to the database: {e}", exc_info=True)
@@ -73,16 +60,15 @@ def webhook():
     data = request.get_json()
     logger.info(f"Received data: {data}")
     try:
-        if 'message' not in data or 'from' not in data['message']:
-            return jsonify({"error": "Invalid data format"}), 400
+        # التأكد من وجود الحقول المطلوبة
+        if 'name' not in data or 'age' not in data:
+            return jsonify({"error": "Invalid data format, 'name' and 'age' are required"}), 400
+        
+        name = data['name']
+        age = data['age']
 
-        user_id = data['message']['from']['id']
-        name = data['message']['from'].get('first_name', 'Unknown')
-        username = data['message']['from'].get('username', 'Unknown')
-        photo = data['message'].get('photo', None)
-
-        # الحصول على رابط الصورة الفعلي
-        photo_url = get_photo_url(photo[0]['file_id']) if photo else "default-avatar.png"
+        # افترض صورة افتراضية بما أن الصورة لم تذكر
+        photo_url = "default-avatar.png"
 
         # حفظ البيانات في قاعدة البيانات
         conn = get_db_connection()
