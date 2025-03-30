@@ -4,14 +4,14 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | minqx</title>
-    <!-- إعدادات CORS -->
     <meta http-equiv="Access-Control-Allow-Origin" content="*">
     <meta http-equiv="Cross-Origin-Opener-Policy" content="unsafe-none">
     <meta http-equiv="Cross-Origin-Embedder-Policy" content="unsafe-none">
     <link rel="shortcut icon" href="static/TemplateData/favicon.ico">
     <link rel="stylesheet" href="static/TemplateData/style.css">
-    <!-- إضافة مكتبة TON Connect من الرابط الخارجي -->
-    <script src="https://minqx.onrender.com/static/tonconnect-sdk.min.js"></script>
+
+    <!-- إضافة مكتبة TON Connect عبر الرابط الخارجي -->
+    <script src="https://cdn.jsdelivr.net/npm/@tonconnect/sdk@latest/dist/tonconnect-sdk.min.js"></script>
     <script type="module" src="static/ton-connect.js" id="ton-connect-script"></script>
   </head>
   <body>
@@ -83,11 +83,7 @@
         productName: "minqx",
         productVersion: "0.1",
         showBanner: unityShowBanner,
-        
-        // إعدادات ضغط Brotli
         decompressionFallback: true,
-        
-        // تحسينات الأداء
         webglContextAttributes: {
           preserveDrawingBuffer: false,
           antialias: false
@@ -103,8 +99,6 @@
         document.getElementsByTagName('head')[0].appendChild(meta);
         container.className = "unity-mobile";
         canvas.className = "unity-mobile";
-        
-        // تحسين الأداء للجوال
         config.devicePixelRatio = 1;
       } else {
         canvas.style.width = "960px";
@@ -181,34 +175,13 @@
       }
 
       function DisconnectTONWallet() {
+          // منطق فصل الاتصال بمحفظة TON
           console.log('تم فصل الاتصال بمحفظة TON');
-          if (window.unityInstance) {
-              window.unityInstance.SendMessage('TelegramWalletConnector', 'OnWalletConnected', '');
-          }
       }
 
       function GetWalletBalance() {
           console.log('جلب رصيد المحفظة...');
-          // منطق جلب الرصيد (اختياري)
-          if (window.TonConnect) {
-              const tonConnect = new TonConnect({
-                  network: 'mainnet',
-              });
-
-              tonConnect.getBalance().then(balance => {
-                  console.log('رصيد المحفظة:', balance);
-                  // إرسال الرصيد إلى Unity
-                  SendWalletBalanceToUnity(balance);
-              }).catch(error => {
-                  console.error('فشل جلب رصيد المحفظة:', error);
-              });
-          }
-      }
-
-      function SendWalletBalanceToUnity(balance) {
-          if (window.unityInstance) {
-              window.unityInstance.SendMessage('TelegramWalletConnector', 'OnBalanceUpdated', balance);
-          }
+          // منطق جلب الرصيد
       }
 
       // ربط الزر الخاص بالاتصال بالمحفظة
