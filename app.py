@@ -119,8 +119,8 @@ def webhook():
             'photo_url': photo_url
         }
 
-        # عرض index.html مع تمرير البيانات
-        return render_template('index.html', player_data=player_data)
+        # عرض الصفحة من مجلد static
+        return send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')
 
     except Exception as e:
         logger.error(f"An error occurred while processing the data: {e}", exc_info=True)
