@@ -10,7 +10,7 @@
     <link rel="shortcut icon" href="/static/TemplateData/favicon.ico">
     <link rel="stylesheet" href="/static/TemplateData/style.css">
 
-    <!-- إضافة مكتبة TON Connect من المسار المحلي -->
+    <!-- إضافة مكتبة TON Connect -->
     <script src="/static/tonconnect-sdk.min.js"></script>
     <script type="module" src="/static/ton-connect.js" id="ton-connect-script"></script>
   </head>
@@ -35,6 +35,29 @@
     <button id="connectWalletButton">🔗 Connect Wallet</button>
 
     <script>
+      // تعريف العناصر قبل استخدامها
+      var canvas = document.getElementById("unity-canvas");
+      var loadingBar = document.getElementById("unity-loading-bar");
+      var progressBarFull = document.getElementById("unity-progress-bar-full");
+      var fullscreenButton = document.getElementById("unity-fullscreen-button");
+      var warningBanner = document.getElementById("unity-warning");
+
+      // دالة عرض التنبيهات
+      function unityShowBanner(msg, type) {
+          var div = document.createElement('div');
+          div.innerHTML = msg;
+          warningBanner.appendChild(div);
+
+          if (type === 'error') {
+              div.style = 'background: red; padding: 10px;';
+          } else if (type === 'warning') {
+              div.style = 'background: yellow; padding: 10px;';
+              setTimeout(() => warningBanner.removeChild(div), 5000);
+          }
+          warningBanner.style.display = 'block';
+      }
+
+      // إعدادات المسارات
       var buildUrl = "/static/Build";
       var loaderUrl = buildUrl + "/build.loader.js";
       var config = {
@@ -47,24 +70,27 @@
         productVersion: "0.1",
         showBanner: unityShowBanner,
         decompressionFallback: true,
-        webglContextAttributes: {
-          preserveDrawingBuffer: false,
-          antialias: false
-        },
+        webglContextAttributes: { preserveDrawingBuffer: false, antialias: false },
         compatibilityMode: false
       };
 
       function loadUnity() {
         var script = document.createElement("script");
         script.src = loaderUrl;
-        
+
         script.onerror = function(error) {
-          console.error("Error loading:", error);
+          console.error("Error loading Unity:", error);
+          unityShowBanner("فشل تحميل محمل Unity!", "error");
         };
 
         script.onload = function() {
+          if (typeof createUnityInstance === 'undefined') {
+            unityShowBanner("محمل Unity غير متاح!", "error");
+            return;
+          }
+
           createUnityInstance(canvas, config, function(progress) {
-            progressBarFull.style.width = 100 * progress + "%";
+            progressBarFull.style.width = (100 * progress) + "%";
           }).then(function(unityInstance) {
             loadingBar.style.display = "none";
             fullscreenButton.onclick = function() {
@@ -72,16 +98,15 @@
             };
           }).catch(function(error) {
             console.error("Unity initialization failed:", error);
+            unityShowBanner("فشل تشغيل اللعبة!", "error");
           });
         };
 
         document.body.appendChild(script);
       }
 
-      window.addEventListener('load', function() {
-        loadUnity();
-      });
-
+      // تحميل Unity بعد اكتمال تحميل الصفحة
+      window.addEventListener('load', loadUnity);
     </script>
   </body>
 </html>
