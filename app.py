@@ -34,6 +34,19 @@ def get_db_connection():
             port=result.port or 5432
         )
         logger.info("Successfully connected to the database.")
+        
+        # إنشاء الجدول إذا لم يكن موجودًا
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS players (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(100),
+                    image_url TEXT,
+                    progress INTEGER DEFAULT 0
+                );
+            """)
+            conn.commit()
+        
         return conn
     except Exception as e:
         logger.error(f"Failed to connect to the database: {e}", exc_info=True)
