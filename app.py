@@ -43,10 +43,16 @@ def get_db_connection():
 def get_photo_url(file_id):
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     url = f"https://api.telegram.org/bot{token}/getFile?file_id={file_id}"
-    response = requests.get(url)
-    file_path = response.json().get("result", {}).get("file_path", "")
-    if file_path:
-        return f"https://api.telegram.org/file/bot{token}/{file_path}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # رفع استثناء إذا كان هناك خطأ في الاستجابة
+        file_path = response.json().get("result", {}).get("file_path", "")
+        if file_path:
+            return f"https://api.telegram.org/file/bot{token}/{file_path}"
+        else:
+            logger.warning("No file path found in the response.")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to get photo URL: {e}", exc_info=True)
     return None
 
 # وظيفة لإنشاء الجدول إذا لم يكن موجودًا
@@ -55,14 +61,12 @@ def create_players_table():
     if conn:
         try:
             with conn.cursor() as cursor:
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS players (
-                        id SERIAL PRIMARY KEY,
-                        name VARCHAR(255),
-                        image_url VARCHAR(255),
-                        progress INT
-                    )
-                ''')
+                cursor.execute('''CREATE TABLE IF NOT EXISTS players (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(255),
+                    image_url VARCHAR(255),
+                    progress INT
+                )''')
                 conn.commit()
                 logger.info("Players table created successfully.")
         except Exception as e:
@@ -84,6 +88,7 @@ def webhook():
     logger.info(f"Received data: {data}")
     try:
         if 'message' not in data or 'from' not in data['message']:
+            logger.error("Invalid data format: 'message' or 'from' not found")
             return jsonify({"error": "Invalid data format"}), 400
 
         user_id = data['message']['from']['id']
@@ -97,11 +102,16 @@ def webhook():
         # حفظ البيانات في قاعدة البيانات
         conn = get_db_connection()
         if conn:
-            with conn.cursor() as cursor:
-                cursor.execute("INSERT INTO players (name, image_url, progress) VALUES (%s, %s, %s)",
-                               (name, photo_url, 0))
-                conn.commit()
-            conn.close()
+            try:
+                with conn.cursor() as cursor:
+                    cursor.execute("INSERT INTO players (name, image_url, progress) VALUES (%s, %s, %s)",
+                                   (name, photo_url, 0))
+                    conn.commit()
+                logger.info(f"Player {name} added successfully.")
+            except Exception as e:
+                logger.error(f"Error inserting data into the database: {e}", exc_info=True)
+            finally:
+                conn.close()
 
         # تمرير البيانات إلى صفحة HTML
         player_data = {
@@ -113,7 +123,7 @@ def webhook():
         return render_template('index.html', player_data=player_data)
 
     except Exception as e:
-        logger.error(f"An error occurred: {e}", exc_info=True)
+        logger.error(f"An error occurred while processing the data: {e}", exc_info=True)
         return jsonify({"error": "An error occurred while processing the data."}), 500
 
 if __name__ == '__main__':
