@@ -60,6 +60,9 @@ def webhook():
     data = request.get_json()
     logger.info(f"Received data: {data}")
     try:
+        if 'message' not in data or 'from' not in data['message']:
+            return jsonify({"error": "Invalid data format"}), 400
+
         user_id = data['message']['from']['id']
         name = data['message']['from'].get('first_name', 'Unknown')
         username = data['message']['from'].get('username', 'Unknown')
