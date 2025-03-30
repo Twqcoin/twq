@@ -15,7 +15,7 @@
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
+      <canvas id="unity-canvas" width="960" height="600" tabindex="-1"></canvas>
       <div id="unity-loading-bar">
         <div id="unity-logo"></div>
         <div id="unity-progress-bar-empty">
@@ -29,7 +29,10 @@
         <div id="unity-build-title">minqx</div>
       </div>
     </div>
-    
+
+    <!-- زر الاتصال بمحفظة TON -->
+    <button id="connectWalletButton">🔗 Connect Wallet</button>
+
     <script>
       // جلب العناصر من الـ HTML
       var container = document.querySelector("#unity-container");
@@ -106,13 +109,8 @@
         script.src = loaderUrl;
         
         script.onerror = function(error) {
-          var errorMsg = `
-            فشل تحميل Unity!<br><br><b>الخطأ:</b> ${error.message}<br><br>
-            <b>الحلول المقترحة:</b><br>
-            1. تحديث المتصفح<br>
-            2. تفعيل WebAssembly في إعدادات المتصفح<br>
-            3. التأكد من دعم السيرفر لملفات .br
-          `;
+          var errorMsg = `فشل تحميل Unity!<br><br><b>الخطأ:</b> ${error.message}<br><br>
+            <b>الحلول المقترحة:</b><br>1. تحديث المتصفح<br>2. تفعيل WebAssembly في إعدادات المتصفح<br>3. التأكد من دعم السيرفر لملفات .br`;
           unityShowBanner(errorMsg, 'error');
           console.error("Error loading:", error);
         };
@@ -131,14 +129,8 @@
               unityInstance.SetFullscreen(1);
             };
           }).catch(function(error) {
-            var errorDetails = `
-              فشل تشغيل اللعبة!<br><br>
-              <b>الخطأ:</b> ${error.message}<br><br>
-              <b>الحلول المقترحة:</b><br>
-              1. تحديث المتصفح<br>
-              2. تفعيل WebAssembly في إعدادات المتصفح<br>
-              3. التأكد من دعم السيرفر لملفات .br
-            `;
+            var errorDetails = `فشل تشغيل اللعبة!<br><br><b>الخطأ:</b> ${error.message}<br><br>
+              <b>الحلول المقترحة:</b><br>1. تحديث المتصفح<br>2. تفعيل WebAssembly في إعدادات المتصفح<br>3. التأكد من دعم السيرفر لملفات .br`;
             unityShowBanner(errorDetails, 'error');
             console.error("Unity initialization failed:", error);
           });
@@ -184,6 +176,11 @@
           console.log('جلب رصيد المحفظة...');
           // منطق جلب الرصيد
       }
+
+      // ربط الزر الخاص بالاتصال بالمحفظة
+      document.getElementById("connectWalletButton").addEventListener("click", function() {
+        ConnectTONWallet(); // استدعاء دالة الاتصال بالمحفظة عند الضغط على الزر
+      });
     </script>
   </body>
 </html>
