@@ -20,6 +20,7 @@ app = Flask(__name__)
 
 # إعداد مجلد حفظ الصور
 UPLOAD_FOLDER = 'static/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # وظيفة للاتصال بقاعدة البيانات
@@ -63,14 +64,10 @@ def get_photo_url(file_id):
 # دالة لحفظ الصورة في المجلد static/uploads
 def save_photo(file_url, user_id):
     try:
-        # تحميل الصورة
         response = requests.get(file_url, stream=True)
         if response.status_code == 200:
-            # إعداد اسم الملف
             filename = f"{user_id}.jpg"
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            
-            # حفظ الصورة في المجلد
             with open(filepath, 'wb') as f:
                 for chunk in response.iter_content(1024):
                     f.write(chunk)
@@ -79,7 +76,7 @@ def save_photo(file_url, user_id):
         logger.error(f"Error saving photo for user {user_id}: {e}", exc_info=True)
     return None
 
-# وظيفة لإنشاء الجدول إذا لم يكن موجودًا
+# إنشاء الجدول إذا لم يكن موجودًا
 def create_players_table():
     conn = get_db_connection()
     if conn:
@@ -90,7 +87,7 @@ def create_players_table():
                     user_id BIGINT UNIQUE,
                     name VARCHAR(255),
                     image_url VARCHAR(255),
-                    progress INT
+                    progress INT DEFAULT 0
                 )''')
                 conn.commit()
                 logger.info("Players table created successfully.")
@@ -99,42 +96,24 @@ def create_players_table():
         finally:
             conn.close()
 
-# وظيفة لإضافة عمود user_id إذا لم يكن موجودًا
-def add_user_id_column():
-    conn = get_db_connection()
-    if conn:
-        try:
-            with conn.cursor() as cursor:
-                cursor.execute("ALTER TABLE players ADD COLUMN IF NOT EXISTS user_id BIGINT UNIQUE;")
-                conn.commit()
-                logger.info("Column 'user_id' added successfully.")
-        except Exception as e:
-            logger.error(f"Error adding column 'user_id': {e}", exc_info=True)
-        finally:
-            conn.close()
-
-# مسار لعرض الصفحة الرئيسية من مجلد static
+# مسار لعرض الصفحة الرئيسية
 @app.route('/')
 def home():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')
 
-# مسار لمعالجة الويب هوك (Webhook)
+# مسار لمعالجة البيانات القادمة من Telegram Webhook
 @app.route('/webhook', methods=['POST'])
 def webhook():
     create_players_table()
-    add_user_id_column()
     data = request.get_json()
     logger.info(f"Received data: {data}")
     try:
         if not isinstance(data, dict) or 'from' not in data:
-            logger.error("Invalid data format: 'from' not found")
             return jsonify({"error": "Invalid data format"}), 400
 
         user_id = data['from']['id']
         name = data['from'].get('first_name', 'Unknown')
-        username = data['from'].get('username', 'Unknown')
         photo = data.get('photo', None)
-        
         conn = get_db_connection()
         player_data = {"name": name, "photo_url": "default-avatar.png"}
 
@@ -153,20 +132,17 @@ def webhook():
                             file_url = get_photo_url(photo[0]['file_id'])
                             if file_url:
                                 photo_url = save_photo(file_url, user_id) or "default-avatar.png"
-                        cursor.execute("INSERT INTO players (user_id, name, image_url, progress) VALUES (%s, %s, %s, %s)",
-                                       (user_id, name, photo_url, 0))
+                        cursor.execute("INSERT INTO players (user_id, name, image_url) VALUES (%s, %s, %s)",
+                                       (user_id, name, photo_url))
                         conn.commit()
                         player_data["photo_url"] = photo_url
-                    
-                logger.info(f"Player data processed: {player_data}")
             except Exception as e:
                 logger.error(f"Error handling player data: {e}", exc_info=True)
             finally:
                 conn.close()
-        
-        return jsonify({"status": "success", "message": "Data processed successfully", "player_data": player_data})
+        return jsonify({"status": "success", "player_data": player_data})
     except Exception as e:
-        logger.error(f"An error occurred while processing the data: {e}", exc_info=True)
+        logger.error(f"An error occurred: {e}", exc_info=True)
         return jsonify({"error": "An error occurred while processing the data."}), 500
 
 # مسار لعرض الصور المخزنة
