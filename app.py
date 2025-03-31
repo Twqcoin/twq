@@ -1,4 +1,4 @@
-عدل الكود لنجرب import os
+import os
 from flask import Flask, request, jsonify, send_from_directory
 from dotenv import load_dotenv
 import psycopg2
