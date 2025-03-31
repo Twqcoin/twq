@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, url_for
 from dotenv import load_dotenv
 import psycopg2
 from urllib.parse import urlparse
@@ -79,6 +79,11 @@ def create_players_table():
 def home():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')
 
+# مسار لخدمة الملفات الثابتة
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(os.path.join(app.root_path, 'static'), filename)
+
 # مسار لمعالجة الويب هوك (Webhook)
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -96,7 +101,7 @@ def webhook():
         username = data['from'].get('username', 'Unknown')
         photo = data.get('photo', None)
 
-        photo_url = get_photo_url(photo[0]['file_id']) if photo else "default-avatar.png"
+        photo_url = get_photo_url(photo[0]['file_id']) if photo else url_for('static', filename='default-avatar.png', _external=True)
 
         conn = get_db_connection()
         if conn:
