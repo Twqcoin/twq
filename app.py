@@ -13,9 +13,9 @@ load_dotenv()
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
-logger = logging.getLogger(name)
+logger = logging.getLogger(__name__)
 
-app = Flask(name)
+app = Flask(__name__)
 
 # وظيفة للاتصال بقاعدة البيانات
 def get_db_connection():
@@ -87,14 +87,14 @@ def webhook():
     data = request.get_json()
     logger.info(f"Received data: {data}")
     try:
-        if 'message' not in data or 'from' not in data['message']:
-            logger.error("Invalid data format: 'message' or 'from' not found")
+        if not isinstance(data, dict) or 'from' not in data:
+            logger.error("Invalid data format: 'from' not found")
             return jsonify({"error": "Invalid data format"}), 400
 
-        user_id = data['message']['from']['id']
-        name = data['message']['from'].get('first_name', 'Unknown')
-        username = data['message']['from'].get('username', 'Unknown')
-        photo = data['message'].get('photo', None)
+        user_id = data['from']['id']
+        name = data['from'].get('first_name', 'Unknown')
+        username = data['from'].get('username', 'Unknown')
+        photo = data.get('photo', None)
 
         photo_url = get_photo_url(photo[0]['file_id']) if photo else "default-avatar.png"
 
@@ -121,5 +121,5 @@ def webhook():
         logger.error(f"An error occurred while processing the data: {e}", exc_info=True)
         return jsonify({"error": "An error occurred while processing the data."}), 500
 
-if name == 'main':
+if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5001)))
