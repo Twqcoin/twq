@@ -27,7 +27,7 @@
 
     <!-- معلومات اللاعب -->
     <div id="player-info">
-      <img id="player-photo" src="" alt="Player Photo" width="100" height="100">
+      <img id="player-photo" src="static/default-avatar.png" alt="Player Photo" width="100" height="100">
       <p id="player-name">Loading...</p>
     </div>
 
@@ -103,7 +103,7 @@
       // تحديث بيانات اللاعب من السيرفر
       function updatePlayerInfo(playerName, playerPhotoUrl) {
         document.getElementById('player-name').textContent = playerName;
-        document.getElementById('player-photo').src = playerPhotoUrl;
+        document.getElementById('player-photo').src = playerPhotoUrl || 'static/default-avatar.png'; // إذا لم توجد صورة للاعب يتم استخدام الصورة الافتراضية
       }
 
       function fetchPlayerData() {
