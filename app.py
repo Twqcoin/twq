@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory, url_for
+from flask import Flask, request, jsonify, send_from_directory
 from dotenv import load_dotenv
 import psycopg2
 from urllib.parse import urlparse
@@ -63,6 +63,7 @@ def create_players_table():
             with conn.cursor() as cursor:
                 cursor.execute('''CREATE TABLE IF NOT EXISTS players (
                     id SERIAL PRIMARY KEY,
+                    user_id BIGINT UNIQUE,
                     name VARCHAR(255),
                     image_url VARCHAR(255),
                     progress INT
@@ -79,16 +80,10 @@ def create_players_table():
 def home():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')
 
-# مسار لخدمة الملفات الثابتة
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    return send_from_directory(os.path.join(app.root_path, 'static'), filename)
-
 # مسار لمعالجة الويب هوك (Webhook)
 @app.route('/webhook', methods=['POST'])
 def webhook():
     create_players_table()
-
     data = request.get_json()
     logger.info(f"Received data: {data}")
     try:
@@ -100,28 +95,33 @@ def webhook():
         name = data['from'].get('first_name', 'Unknown')
         username = data['from'].get('username', 'Unknown')
         photo = data.get('photo', None)
-
-        photo_url = get_photo_url(photo[0]['file_id']) if photo else url_for('static', filename='default-avatar.png', _external=True)
-
+        
         conn = get_db_connection()
+        player_data = {"name": name, "photo_url": "default-avatar.png"}
+
         if conn:
             try:
                 with conn.cursor() as cursor:
-                    cursor.execute("INSERT INTO players (name, image_url, progress) VALUES (%s, %s, %s)",
-                                   (name, photo_url, 0))
-                    conn.commit()
-                logger.info(f"Player {name} added successfully.")
+                    cursor.execute("SELECT name, image_url FROM players WHERE user_id = %s", (user_id,))
+                    existing_player = cursor.fetchone()
+                    
+                    if existing_player:
+                        player_data["name"] = existing_player[0]
+                        player_data["photo_url"] = existing_player[1] if existing_player[1] else "default-avatar.png"
+                    else:
+                        photo_url = get_photo_url(photo[0]['file_id']) if photo else "default-avatar.png"
+                        cursor.execute("INSERT INTO players (user_id, name, image_url, progress) VALUES (%s, %s, %s, %s)",
+                                       (user_id, name, photo_url, 0))
+                        conn.commit()
+                        player_data["photo_url"] = photo_url
+                    
+                logger.info(f"Player data processed: {player_data}")
             except Exception as e:
-                logger.error(f"Error inserting data into the database: {e}", exc_info=True)
+                logger.error(f"Error handling player data: {e}", exc_info=True)
             finally:
                 conn.close()
-
-        player_data = {
-            'name': name,
-            'photo_url': photo_url
-        }
+        
         return jsonify({"status": "success", "message": "Data processed successfully", "player_data": player_data})
-
     except Exception as e:
         logger.error(f"An error occurred while processing the data: {e}", exc_info=True)
         return jsonify({"error": "An error occurred while processing the data."}), 500
