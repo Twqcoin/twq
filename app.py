@@ -45,7 +45,7 @@ def get_photo_url(file_id):
     url = f"https://api.telegram.org/bot{token}/getFile?file_id={file_id}"
     try:
         response = requests.get(url)
-        response.raise_for_status()  # رفع استثناء إذا كان هناك خطأ في الاستجابة
+        response.raise_for_status()
         file_path = response.json().get("result", {}).get("file_path", "")
         if file_path:
             return f"https://api.telegram.org/file/bot{token}/{file_path}"
@@ -82,7 +82,7 @@ def home():
 # مسار لمعالجة الويب هوك (Webhook)
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    create_players_table()  # إنشاء الجدول إذا لم يكن موجودًا
+    create_players_table()
 
     data = request.get_json()
     logger.info(f"Received data: {data}")
@@ -96,10 +96,8 @@ def webhook():
         username = data['message']['from'].get('username', 'Unknown')
         photo = data['message'].get('photo', None)
 
-        # الحصول على رابط الصورة الفعلي
         photo_url = get_photo_url(photo[0]['file_id']) if photo else "default-avatar.png"
 
-        # حفظ البيانات في قاعدة البيانات
         conn = get_db_connection()
         if conn:
             try:
@@ -113,13 +111,11 @@ def webhook():
             finally:
                 conn.close()
 
-        # تمرير البيانات إلى صفحة HTML (إذا كنت بحاجة لذلك)
         player_data = {
             'name': name,
             'photo_url': photo_url
         }
 
-        # الرد بـ JSON بدلاً من توجيه الصفحة
         return jsonify({"status": "success", "message": "Data processed successfully", "player_data": player_data})
 
     except Exception as e:
