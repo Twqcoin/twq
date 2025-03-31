@@ -6,11 +6,37 @@
     <title>Unity WebGL Player | minqx</title>
     <link rel="shortcut icon" href="static/TemplateData/favicon.ico">
     <link rel="stylesheet" href="static/TemplateData/style.css">
+    <style>
+      /* تصميم الـ user-info داخل التطبيق */
+      #user-info {
+        position: absolute;
+        top: 20px; /* تعديل الموقع داخل التطبيق */
+        left: 20px; /* تعديل الموقع داخل التطبيق */
+        background-color: rgba(0, 0, 0, 0.5); /* خلفية شفافة داكنة */
+        color: white;
+        padding: 10px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      #profilePic {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+      }
+
+      #username {
+        font-size: 18px;
+        font-weight: bold;
+      }
+    </style>
   </head>
   <body>
-    <!-- إضافة عرض الاسم والصورة -->
+    <!-- إضافة عرض الاسم والصورة داخل التطبيق -->
     <div id="user-info">
-      <img id="profilePic" src="" alt="Profile Picture" style="width: 50px; height: 50px; border-radius: 50%;">
+      <img id="profilePic" src="" alt="Profile Picture">
       <h2 id="username">Loading...</h2>
     </div>
     
