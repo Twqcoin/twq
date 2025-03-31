@@ -12,7 +12,8 @@ load_dotenv()
 
 # إعدادات التسجيل (Logging)
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", 
+    level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
@@ -86,14 +87,16 @@ def create_players_table():
     if conn:
         try:
             with conn.cursor() as cursor:
-                cursor.execute('''CREATE TABLE IF NOT EXISTS players (
-                    id SERIAL PRIMARY KEY,
-                    user_id BIGINT UNIQUE,
-                    name VARCHAR(255),
-                    username VARCHAR(255),
-                    image_url VARCHAR(255),
-                    progress INT
-                )''')
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS players (
+                        id SERIAL PRIMARY KEY,
+                        user_id BIGINT UNIQUE,
+                        name VARCHAR(255),
+                        username VARCHAR(255),
+                        image_url VARCHAR(255),
+                        progress INT
+                    )
+                ''')
                 conn.commit()
                 logger.info("Players table created successfully.")
         except Exception as e:
@@ -164,7 +167,7 @@ def webhook():
                     if existing_player[0] != name or existing_player[1] != photo_url:
                         cursor.execute(
                             "UPDATE players SET name = %s, username = %s, image_url = %s WHERE user_id = %s",
-                            (name, username, photo_url, user_id)
+                            (name, username, photo_url, user_id))
                         conn.commit()
                         logger.info(f"Updated player data for user {user_id}")
                 else:
