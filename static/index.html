@@ -25,10 +25,10 @@
       </div>
     </div>
 
-    <!-- إضافة المعلومات الخاصة باللاعب (الاسم والصورة) -->
+    <!-- معلومات اللاعب -->
     <div id="player-info">
-      <img id="player-photo" src="https://minqx.onrender.com/default-avatar.png" alt="Player Photo" width="100" height="100">
-      <p id="player-name">اسم اللاعب</p>
+      <img id="player-photo" src="" alt="Player Photo" width="100" height="100">
+      <p id="player-name">Loading...</p>
     </div>
 
     <script>
@@ -39,7 +39,6 @@
       var fullscreenButton = document.querySelector("#unity-fullscreen-button");
       var warningBanner = document.querySelector("#unity-warning");
 
-      // دالة لعرض رسالة التنبيه
       function unityShowBanner(msg, type) {
         function updateBannerVisibility() {
           warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
@@ -58,13 +57,13 @@
         updateBannerVisibility();
       }
 
-      var buildUrl = "static/Build";  // المسار للملفات داخل static
+      var buildUrl = "static/Build";
       var loaderUrl = buildUrl + "/static.loader.js";
       var config = {
         dataUrl: buildUrl + "/static.data.br",
         frameworkUrl: buildUrl + "/static.framework.js.br",
         codeUrl: buildUrl + "/static.wasm.br",
-        streamingAssetsUrl: "static/StreamingAssets",  // المسار إلى StreamingAssets
+        streamingAssetsUrl: "static/StreamingAssets",
         companyName: "DefaultCompany",
         productName: "minqx",
         productVersion: "0.1",
@@ -99,23 +98,29 @@
           alert(message);
         });
       };
-
       document.body.appendChild(script);
 
-      // إضافة وظيفة لتحديث بيانات اللاعب (الاسم والصورة)
+      // تحديث بيانات اللاعب من السيرفر
       function updatePlayerInfo(playerName, playerPhotoUrl) {
-        // تحديث الاسم
         document.getElementById('player-name').textContent = playerName;
-        
-        // تحديث الصورة
         document.getElementById('player-photo').src = playerPhotoUrl;
       }
 
-      // مثال على كيفية تحديث بيانات اللاعب
-      var playerName = "UnityUser";  // اسم اللاعب
-      var playerPhotoUrl = "https://minqx.onrender.com/uploads/player-avatar.png";  // رابط الصورة (يمكن تغييره بناءً على البيانات الحقيقية)
+      function fetchPlayerData() {
+        let userId = "USER_ID";  // استبدل بـ ID المستخدم الفعلي
+        fetch(`/get_user_data?user_id=${userId}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.error) {
+              console.log("⚠️ User not found!");
+              return;
+            }
+            updatePlayerInfo(data.name, data.photo_url);
+          })
+          .catch(error => console.error("❌ Error fetching user data:", error));
+      }
 
-      updatePlayerInfo(playerName, playerPhotoUrl);  // استدعاء الدالة لتحديث البيانات
+      fetchPlayerData();  // جلب البيانات عند تحميل الصفحة
     </script>
   </body>
 </html>
