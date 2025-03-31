@@ -10,9 +10,9 @@
       /* تصميم الـ user-info داخل التطبيق */
       #user-info {
         position: absolute;
-        top: 20px; /* تعديل الموقع داخل التطبيق */
-        left: 20px; /* تعديل الموقع داخل التطبيق */
-        background-color: rgba(0, 0, 0, 0.5); /* خلفية شفافة داكنة */
+        top: 20px;
+        left: 20px;
+        background-color: rgba(0, 0, 0, 0.5);
         color: white;
         padding: 10px;
         border-radius: 10px;
@@ -34,12 +34,12 @@
     </style>
   </head>
   <body>
-    <!-- إضافة عرض الاسم والصورة داخل التطبيق -->
+    <!-- عرض اسم وصورة اللاعب داخل التطبيق -->
     <div id="user-info">
       <img id="profilePic" src="" alt="Profile Picture">
       <h2 id="username">Loading...</h2>
     </div>
-    
+
     <div id="unity-container" class="unity-desktop">
       <canvas id="unity-canvas" width="960" height="600" tabindex="-1"></canvas>
       <div id="unity-loading-bar">
@@ -55,11 +55,15 @@
         <div id="unity-build-title">minqx</div>
       </div>
     </div>
-    
+
     <script src="static/tonconnect-sdk.min.js"></script>
     <script src="static/ton-connect.js"></script>
-    
     <script>
+      function setUserInfo(username, photoUrl) {
+        document.getElementById('username').textContent = username;
+        document.getElementById('profilePic').src = photoUrl;
+      }
+
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
       var loadingBar = document.querySelector("#unity-loading-bar");
@@ -98,18 +102,6 @@
         showBanner: unityShowBanner,
       };
 
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
-        container.className = "unity-mobile";
-        canvas.className = "unity-mobile";
-      } else {
-        canvas.style.width = "960px";
-        canvas.style.height = "600px";
-      }
-
       loadingBar.style.display = "block";
 
       var script = document.createElement("script");
@@ -126,18 +118,8 @@
           alert(message);
         });
       };
-      
+
       document.body.appendChild(script);
-
-      // عرض اسم المستخدم والصورة
-      window.onload = function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const name = urlParams.get('name');
-        const photo = urlParams.get('photo');
-
-        document.getElementById('username').textContent = name || 'User';
-        document.getElementById('profilePic').src = photo || 'default-profile-pic.jpg';
-      };
     </script>
   </body>
 </html>
