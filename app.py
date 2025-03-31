@@ -2,7 +2,7 @@ import os
 from flask import Flask, request, jsonify, send_from_directory
 from dotenv import load_dotenv
 import psycopg2
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 import logging
 import requests
 from werkzeug.utils import secure_filename
@@ -20,6 +20,7 @@ app = Flask(__name__)
 
 # إعداد مجلد حفظ الصور
 UPLOAD_FOLDER = 'static/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # إنشاء المجلد إذا لم يكن موجوداً
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # وظيفة للاتصال بقاعدة البيانات
@@ -89,6 +90,7 @@ def create_players_table():
                     id SERIAL PRIMARY KEY,
                     user_id BIGINT UNIQUE,
                     name VARCHAR(255),
+                    username VARCHAR(255),
                     image_url VARCHAR(255),
                     progress INT
                 )''')
@@ -99,75 +101,136 @@ def create_players_table():
         finally:
             conn.close()
 
-# وظيفة لإضافة عمود user_id إذا لم يكن موجودًا
-def add_user_id_column():
-    conn = get_db_connection()
-    if conn:
-        try:
-            with conn.cursor() as cursor:
-                cursor.execute("ALTER TABLE players ADD COLUMN IF NOT EXISTS user_id BIGINT UNIQUE;")
-                conn.commit()
-                logger.info("Column 'user_id' added successfully.")
-        except Exception as e:
-            logger.error(f"Error adding column 'user_id': {e}", exc_info=True)
-        finally:
-            conn.close()
-
-# مسار لعرض الصفحة الرئيسية من مجلد static
+# مسار لعرض الصفحة الرئيسية
 @app.route('/')
 def home():
+    # استخراج بيانات المستخدم من query parameters
+    query_string = request.query_string.decode('utf-8')
+    params = parse_qs(query_string)
+    
+    user_id = params.get('user_id', [None])[0]
+    name = params.get('name', ['Unknown'])[0]
+    username = params.get('username', ['Unknown'])[0]
+    photo_url = params.get('photo', [None])[0]
+    
+    # حفظ بيانات المستخدم في الجلسة أو قاعدة البيانات إذا لزم الأمر
+    logger.info(f"User accessed home page: {name} (ID: {user_id})")
+    
     return send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')
 
 # مسار لمعالجة الويب هوك (Webhook)
 @app.route('/webhook', methods=['POST'])
 def webhook():
     create_players_table()
-    add_user_id_column()
     data = request.get_json()
-    logger.info(f"Received data: {data}")
+    logger.info(f"Received webhook data: {data}")
+    
     try:
-        if not isinstance(data, dict) or 'from' not in data:
-            logger.error("Invalid data format: 'from' not found")
+        if not isinstance(data, dict):
+            logger.error("Invalid data format")
             return jsonify({"error": "Invalid data format"}), 400
 
-        user_id = data['from']['id']
-        name = data['from'].get('first_name', 'Unknown')
-        username = data['from'].get('username', 'Unknown')
-        photo = data.get('photo', None)
-        
-        conn = get_db_connection()
-        player_data = {"name": name, "photo_url": "default-avatar.png"}
+        # استخراج بيانات المستخدم من الطلب
+        user_id = data.get('user_id') or (data.get('from', {}).get('id') if 'from' in data else None)
+        name = data.get('name') or (data.get('from', {}).get('first_name', 'Unknown') if 'from' in data else 'Unknown')
+        username = data.get('username') or (data.get('from', {}).get('username', 'Unknown') if 'from' in data else 'Unknown')
+        photo = data.get('photo') or (data.get('photo_url') or 'default-avatar.png')
 
-        if conn:
-            try:
-                with conn.cursor() as cursor:
-                    cursor.execute("SELECT name, image_url FROM players WHERE user_id = %s", (user_id,))
-                    existing_player = cursor.fetchone()
-                    
-                    if existing_player:
-                        player_data["name"] = existing_player[0]
-                        player_data["photo_url"] = existing_player[1] if existing_player[1] else "default-avatar.png"
-                    else:
-                        photo_url = "default-avatar.png"
-                        if photo:
-                            file_url = get_photo_url(photo[0]['file_id'])
-                            if file_url:
-                                photo_url = save_photo(file_url, user_id) or "default-avatar.png"
-                        cursor.execute("INSERT INTO players (user_id, name, image_url, progress) VALUES (%s, %s, %s, %s)",
-                                       (user_id, name, photo_url, 0))
+        if not user_id:
+            logger.error("User ID not provided")
+            return jsonify({"error": "User ID is required"}), 400
+
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+
+        try:
+            with conn.cursor() as cursor:
+                # التحقق من وجود المستخدم في قاعدة البيانات
+                cursor.execute("SELECT name, image_url FROM players WHERE user_id = %s", (user_id,))
+                existing_player = cursor.fetchone()
+                
+                photo_url = photo
+                if photo and not photo.startswith(('http', '/')):
+                    # إذا كانت photo عبارة عن file_id من Telegram
+                    file_url = get_photo_url(photo)
+                    if file_url:
+                        saved_filename = save_photo(file_url, user_id)
+                        if saved_filename:
+                            photo_url = f"/uploads/{saved_filename}"
+
+                if existing_player:
+                    # تحديث بيانات المستخدم إذا تغيرت
+                    if existing_player[0] != name or existing_player[1] != photo_url:
+                        cursor.execute(
+                            "UPDATE players SET name = %s, username = %s, image_url = %s WHERE user_id = %s",
+                            (name, username, photo_url, user_id)
                         conn.commit()
-                        player_data["photo_url"] = photo_url
-                    
+                        logger.info(f"Updated player data for user {user_id}")
+                else:
+                    # إضافة مستخدم جديد
+                    cursor.execute(
+                        "INSERT INTO players (user_id, name, username, image_url, progress) VALUES (%s, %s, %s, %s, %s)",
+                        (user_id, name, username, photo_url, 0))
+                    conn.commit()
+                    logger.info(f"Added new player: {name} (ID: {user_id})")
+
+                player_data = {
+                    "user_id": user_id,
+                    "name": name,
+                    "username": username,
+                    "photo_url": photo_url if photo_url else "default-avatar.png"
+                }
+                
                 logger.info(f"Player data processed: {player_data}")
-            except Exception as e:
-                logger.error(f"Error handling player data: {e}", exc_info=True)
-            finally:
-                conn.close()
-        
-        return jsonify({"status": "success", "message": "Data processed successfully", "player_data": player_data})
+                return jsonify({
+                    "status": "success",
+                    "message": "Data processed successfully",
+                    "player_data": player_data
+                })
+                
+        except Exception as e:
+            logger.error(f"Database error: {e}", exc_info=True)
+            return jsonify({"error": "Database operation failed"}), 500
+        finally:
+            conn.close()
+            
     except Exception as e:
-        logger.error(f"An error occurred while processing the data: {e}", exc_info=True)
-        return jsonify({"error": "An error occurred while processing the data."}), 500
+        logger.error(f"An error occurred: {e}", exc_info=True)
+        return jsonify({"error": "An error occurred while processing the request"}), 500
+
+# مسار للحصول على بيانات اللاعب
+@app.route('/get_player_data', methods=['GET'])
+def get_player_data():
+    user_id = request.args.get('user_id')
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT name, username, image_url FROM players WHERE user_id = %s", (user_id,))
+            player = cursor.fetchone()
+            
+            if player:
+                return jsonify({
+                    "status": "success",
+                    "player_data": {
+                        "name": player[0],
+                        "username": player[1],
+                        "photo_url": player[2] if player[2] else "default-avatar.png"
+                    }
+                })
+            else:
+                return jsonify({"error": "Player not found"}), 404
+    except Exception as e:
+        logger.error(f"Database error: {e}", exc_info=True)
+        return jsonify({"error": "Database operation failed"}), 500
+    finally:
+        conn.close()
 
 # مسار لعرض الصور المخزنة
 @app.route('/uploads/<filename>')
@@ -175,4 +238,6 @@ def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
+    # إنشاء مجلد التحميلات إذا لم يكن موجوداً
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5001)))
