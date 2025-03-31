@@ -8,6 +8,12 @@
     <link rel="stylesheet" href="static/TemplateData/style.css">
   </head>
   <body>
+    <!-- إضافة عرض الاسم والصورة -->
+    <div id="user-info">
+      <img id="profilePic" src="" alt="Profile Picture" style="width: 50px; height: 50px; border-radius: 50%;">
+      <h2 id="username">Loading...</h2>
+    </div>
+    
     <div id="unity-container" class="unity-desktop">
       <canvas id="unity-canvas" width="960" height="600" tabindex="-1"></canvas>
       <div id="unity-loading-bar">
@@ -96,6 +102,16 @@
       };
       
       document.body.appendChild(script);
+
+      // عرض اسم المستخدم والصورة
+      window.onload = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const name = urlParams.get('name');
+        const photo = urlParams.get('photo');
+
+        document.getElementById('username').textContent = name || 'User';
+        document.getElementById('profilePic').src = photo || 'default-profile-pic.jpg';
+      };
     </script>
   </body>
 </html>
