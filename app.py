@@ -75,6 +75,20 @@ def create_players_table():
         finally:
             conn.close()
 
+# وظيفة لإضافة عمود user_id إذا لم يكن موجودًا
+def add_user_id_column():
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("ALTER TABLE players ADD COLUMN IF NOT EXISTS user_id BIGINT UNIQUE;")
+                conn.commit()
+                logger.info("Column 'user_id' added successfully.")
+        except Exception as e:
+            logger.error(f"Error adding column 'user_id': {e}", exc_info=True)
+        finally:
+            conn.close()
+
 # مسار لعرض الصفحة الرئيسية من مجلد static
 @app.route('/')
 def home():
@@ -84,6 +98,7 @@ def home():
 @app.route('/webhook', methods=['POST'])
 def webhook():
     create_players_table()
+    add_user_id_column()
     data = request.get_json()
     logger.info(f"Received data: {data}")
     try:
