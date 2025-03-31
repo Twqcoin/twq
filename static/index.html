@@ -6,6 +6,25 @@
     <title>Unity WebGL Player | minqx</title>
     <link rel="shortcut icon" href="static/TemplateData/favicon.ico">
     <link rel="stylesheet" href="static/TemplateData/style.css">
+    <style>
+      /* إضافة ستايل لعرض معلومات اللاعب */
+      #player-info {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(0,0,0,0.5);
+        padding: 10px;
+        border-radius: 5px;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      #player-photo {
+        border-radius: 50%;
+        border: 2px solid white;
+      }
+    </style>
   </head>
   <body>
     <!-- محتوى اللاعب في Unity -->
@@ -27,8 +46,11 @@
 
     <!-- معلومات اللاعب -->
     <div id="player-info">
-      <img id="player-photo" src="" alt="Player Photo" width="100" height="100">
-      <p id="player-name">Loading...</p>
+      <img id="player-photo" src="static/default-avatar.png" alt="Player Photo" width="50" height="50">
+      <div>
+        <p id="player-name" style="margin:0;font-weight:bold">Loading...</p>
+        <p id="player-username" style="margin:0;font-size:0.8em"></p>
+      </div>
     </div>
 
     <script>
@@ -101,26 +123,52 @@
       document.body.appendChild(script);
 
       // تحديث بيانات اللاعب من السيرفر
-      function updatePlayerInfo(playerName, playerPhotoUrl) {
-        document.getElementById('player-name').textContent = playerName;
-        document.getElementById('player-photo').src = playerPhotoUrl;
+      function updatePlayerInfo(playerData) {
+        document.getElementById('player-name').textContent = playerData.name;
+        document.getElementById('player-username').textContent = playerData.username;
+        
+        // معالجة الصورة - استخدم الصورة الافتراضية إذا لم توجد صورة
+        const photoUrl = playerData.photo_url || 'static/default-avatar.png';
+        document.getElementById('player-photo').src = photoUrl.startsWith('http') ? 
+          photoUrl : 
+          (photoUrl.startsWith('/') ? photo_url : `/${photoUrl}`);
       }
 
       function fetchPlayerData() {
-        let userId = "USER_ID";  // استبدل بـ ID المستخدم الفعلي
-        fetch(`/get_user_data?user_id=${userId}`)
-          .then(response => response.json())
+        // استخراج بيانات المستخدم من رابط الصفحة
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('user_id');
+        
+        if (!userId) {
+          console.error("❌ User ID not found in URL");
+          return;
+        }
+
+        fetch(`/get_player_data?user_id=${userId}`)
+          .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+          })
           .then(data => {
             if (data.error) {
-              console.log("⚠️ User not found!");
+              console.error("⚠️ Error:", data.error);
               return;
             }
-            updatePlayerInfo(data.name, data.photo_url);
+            updatePlayerInfo(data.player_data);
           })
-          .catch(error => console.error("❌ Error fetching user data:", error));
+          .catch(error => {
+            console.error("❌ Error fetching user data:", error);
+            // عرض بيانات افتراضية في حالة الخطأ
+            updatePlayerInfo({
+              name: "Guest",
+              username: "guest",
+              photo_url: "static/default-avatar.png"
+            });
+          });
       }
 
-      fetchPlayerData();  // جلب البيانات عند تحميل الصفحة
+      // جلب البيانات عند تحميل الصفحة
+      document.addEventListener('DOMContentLoaded', fetchPlayerData);
     </script>
   </body>
 </html>
