@@ -5,6 +5,7 @@ import psycopg2
 from urllib.parse import urlparse
 import logging
 import requests
+from werkzeug.utils import secure_filename
 
 # تحميل المتغيرات البيئية
 load_dotenv()
@@ -16,6 +17,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+# إعداد مجلد حفظ الصور
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # وظيفة للاتصال بقاعدة البيانات
 def get_db_connection():
@@ -53,6 +58,25 @@ def get_photo_url(file_id):
             logger.warning("No file path found in the response.")
     except requests.exceptions.RequestException as e:
         logger.error(f"Failed to get photo URL: {e}", exc_info=True)
+    return None
+
+# دالة لحفظ الصورة في المجلد static/uploads
+def save_photo(file_url, user_id):
+    try:
+        # تحميل الصورة
+        response = requests.get(file_url, stream=True)
+        if response.status_code == 200:
+            # إعداد اسم الملف
+            filename = f"{user_id}.jpg"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            
+            # حفظ الصورة في المجلد
+            with open(filepath, 'wb') as f:
+                for chunk in response.iter_content(1024):
+                    f.write(chunk)
+            return filename
+    except Exception as e:
+        logger.error(f"Error saving photo for user {user_id}: {e}", exc_info=True)
     return None
 
 # وظيفة لإنشاء الجدول إذا لم يكن موجودًا
@@ -124,7 +148,11 @@ def webhook():
                         player_data["name"] = existing_player[0]
                         player_data["photo_url"] = existing_player[1] if existing_player[1] else "default-avatar.png"
                     else:
-                        photo_url = get_photo_url(photo[0]['file_id']) if photo else "default-avatar.png"
+                        photo_url = "default-avatar.png"
+                        if photo:
+                            file_url = get_photo_url(photo[0]['file_id'])
+                            if file_url:
+                                photo_url = save_photo(file_url, user_id) or "default-avatar.png"
                         cursor.execute("INSERT INTO players (user_id, name, image_url, progress) VALUES (%s, %s, %s, %s)",
                                        (user_id, name, photo_url, 0))
                         conn.commit()
@@ -140,6 +168,11 @@ def webhook():
     except Exception as e:
         logger.error(f"An error occurred while processing the data: {e}", exc_info=True)
         return jsonify({"error": "An error occurred while processing the data."}), 500
+
+# مسار لعرض الصور المخزنة
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5001)))
