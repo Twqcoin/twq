@@ -115,7 +115,7 @@ def webhook():
         name = data['from'].get('first_name', 'Unknown')
         photo = data.get('photo', None)
         conn = get_db_connection()
-        player_data = {"name": name, "photo_url": "default-avatar.png"}
+        player_data = {"name": name, "photo_url": "https://<your-app-name>.onrender.com/static/default-avatar.png"}  # رابط جديد
 
         if conn:
             try:
@@ -125,13 +125,13 @@ def webhook():
                     
                     if existing_player:
                         player_data["name"] = existing_player[0]
-                        player_data["photo_url"] = existing_player[1] if existing_player[1] else "default-avatar.png"
+                        player_data["photo_url"] = existing_player[1] if existing_player[1] else "https://<your-app-name>.onrender.com/static/default-avatar.png"  # رابط جديد
                     else:
-                        photo_url = "default-avatar.png"
+                        photo_url = "https://<your-app-name>.onrender.com/static/default-avatar.png"  # رابط جديد
                         if photo:
                             file_url = get_photo_url(photo[0]['file_id'])
                             if file_url:
-                                photo_url = save_photo(file_url, user_id) or "default-avatar.png"
+                                photo_url = save_photo(file_url, user_id) or "https://<your-app-name>.onrender.com/static/default-avatar.png"  # رابط جديد
                         cursor.execute("INSERT INTO players (user_id, name, image_url) VALUES (%s, %s, %s)",
                                        (user_id, name, photo_url))
                         conn.commit()
