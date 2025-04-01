@@ -24,11 +24,6 @@
       </div>
     </div>
 
-    <div id="player-info">
-      <img id="player-photo" src="static/default-avatar.png" alt="Player Photo" width="100" height="100">
-      <p id="player-name">Loading...</p>
-    </div>
-
     <script>
       var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
@@ -98,10 +93,11 @@
       };
       document.body.appendChild(script);
 
-      // تحديث معلومات اللاعب
-      function updatePlayerInfo(playerName, playerPhotoUrl) {
-        document.getElementById('player-name').textContent = playerName || "Unknown Player";
-        document.getElementById('player-photo').src = playerPhotoUrl || 'static/default-avatar.png';
+      // تحديث معلومات اللاعب داخل اللعبة
+      function updatePlayerInfoInGame(playerName, playerPhotoUrl) {
+        // يمكنك إرسال هذه البيانات إلى اللعبة داخل Unity عبر Unity's messaging system.
+        // على سبيل المثال:
+        SendMessage('GameController', 'UpdatePlayerInfo', JSON.stringify({ name: playerName, photo: playerPhotoUrl }));
       }
 
       // جلب بيانات اللاعب من الخادم
@@ -119,7 +115,7 @@
               console.log("⚠️ User not found!");
               return;
             }
-            updatePlayerInfo(data.name, data.photo_url);
+            updatePlayerInfoInGame(data.name, data.photo_url); // تمرير البيانات إلى اللعبة
           })
           .catch(error => console.error("❌ Error fetching user data:", error));
       }
