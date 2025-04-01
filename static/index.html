@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | minqx</title>
-    <link rel="shortcut icon" href="static/favicon.ico">
-    <link rel="stylesheet" href="static/style.css">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='TemplateData/favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='TemplateData/style.css') }}">
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
@@ -50,13 +50,13 @@
         updateBannerVisibility();
       }
 
-      var buildUrl = "static/Build";
+      var buildUrl = "{{ url_for('static', filename='TemplateData/Build') }}";
       var loaderUrl = buildUrl + "/static.loader.js";
       var config = {
         dataUrl: buildUrl + "/static.data.br",
         frameworkUrl: buildUrl + "/static.framework.js.br",
         codeUrl: buildUrl + "/static.wasm.br",
-        streamingAssetsUrl: "static/StreamingAssets",
+        streamingAssetsUrl: "{{ url_for('static', filename='TemplateData/StreamingAssets') }}",
         companyName: "DefaultCompany",
         productName: "minqx",
         productVersion: "0.1",
