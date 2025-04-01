@@ -1,126 +1,154 @@
-حدث المسارات هنا وارسل الكود كامل  <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Unity WebGL Player | minqx</title>
-    <link rel="shortcut icon" href="static/favicon.ico">
-    <link rel="stylesheet" href="static/style.css">
-  </head>
-  <body>
-    <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas" width="960" height="600" tabindex="-1"></canvas>
-      <div id="unity-loading-bar">
-        <div id="unity-logo"></div>
-        <div id="unity-progress-bar-empty">
-          <div id="unity-progress-bar-full"></div>
-        </div>
-      </div>
-      <div id="unity-warning"></div>
-      <div id="unity-footer">
-        <div id="unity-webgl-logo"></div>
-        <div id="unity-fullscreen-button"></div>
-        <div id="unity-build-title">minqx</div>
-      </div>
-    </div>
+import os
+from flask import Flask, request, jsonify, send_from_directory
+from dotenv import load_dotenv
+import psycopg2
+from urllib.parse import urlparse
+import logging
+import requests
+from werkzeug.utils import secure_filename
 
-    <script>
-      var container = document.querySelector("#unity-container");
-      var canvas = document.querySelector("#unity-canvas");
-      var loadingBar = document.querySelector("#unity-loading-bar");
-      var progressBarFull = document.querySelector("#unity-progress-bar-full");
-      var fullscreenButton = document.querySelector("#unity-fullscreen-button");
-      var warningBanner = document.querySelector("#unity-warning");
+# تحميل المتغيرات البيئية
+load_dotenv()
 
-      function unityShowBanner(msg, type) {
-        function updateBannerVisibility() {
-          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-        }
-        var div = document.createElement('div');
-        div.innerHTML = msg;
-        warningBanner.appendChild(div);
-        if (type == 'error') div.style = 'background: red; padding: 10px;';
-        else {
-          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-          setTimeout(function() {
-            warningBanner.removeChild(div);
-            updateBannerVisibility();
-          }, 5000);
-        }
-        updateBannerVisibility();
-      }
+# إعدادات التسجيل (Logging)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
-      var buildUrl = "static/Build";
-      var loaderUrl = buildUrl + "/static.loader.js";
-      var config = {
-        dataUrl: buildUrl + "/static.data.br",
-        frameworkUrl: buildUrl + "/static.framework.js.br",
-        codeUrl: buildUrl + "/static.wasm.br",
-        streamingAssetsUrl: "static/StreamingAssets",
-        companyName: "DefaultCompany",
-        productName: "minqx",
-        productVersion: "0.1",
-        showBanner: unityShowBanner,
-      };
+app = Flask(__name__)
 
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
-        container.className = "unity-mobile";
-        canvas.className = "unity-mobile";
-      } else {
-        canvas.style.width = "960px";
-        canvas.style.height = "600px";
-      }
+# إعداد مجلد حفظ الصور
+UPLOAD_FOLDER = 'static/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-      loadingBar.style.display = "block";
+# وظيفة للاتصال بقاعدة البيانات
+def get_db_connection():
+    try:
+        database_url = os.getenv("DATABASE_URL")
+        if not database_url:
+            logger.error("DATABASE_URL is missing in the environment variables.")
+            return None
 
-      var script = document.createElement("script");
-      script.src = loaderUrl;
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          progressBarFull.style.width = 100 * progress + "%";
-        }).then((unityInstance) => {
-          loadingBar.style.display = "none";
-          fullscreenButton.onclick = () => {
-            unityInstance.SetFullscreen(1);
-          };
-        }).catch((message) => {
-          alert(message);
-        });
-      };
-      document.body.appendChild(script);
+        result = urlparse(database_url)
+        conn = psycopg2.connect(
+            database=result.path[1:],
+            user=result.username,
+            password=result.password,
+            host=result.hostname,
+            port=result.port or 5432
+        )
+        logger.info("Successfully connected to the database.")
+        return conn
+    except Exception as e:
+        logger.error(f"Failed to connect to the database: {e}", exc_info=True)
+        return None
 
-      // تحديث معلومات اللاعب داخل اللعبة
-      function updatePlayerInfoInGame(playerName, playerPhotoUrl) {
-        // يمكنك إرسال هذه البيانات إلى اللعبة داخل Unity عبر Unity's messaging system.
-        // على سبيل المثال:
-        SendMessage('GameController', 'UpdatePlayerInfo', JSON.stringify({ name: playerName, photo: playerPhotoUrl }));
-      }
+# دالة لتحميل الصورة عبر Telegram API باستخدام file_id
+def get_photo_url(file_id):
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    url = f"https://api.telegram.org/bot{token}/getFile?file_id={file_id}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        file_path = response.json().get("result", {}).get("file_path", "")
+        if file_path:
+            return f"https://api.telegram.org/file/bot{token}/{file_path}"
+        else:
+            logger.warning("No file path found in the response.")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to get photo URL: {e}", exc_info=True)
+    return None
 
-      // جلب بيانات اللاعب من الخادم
-      function fetchPlayerData() {
-        let userId = new URLSearchParams(window.location.search).get("user_id");
-        if (!userId) {
-          console.log("⚠️ No user ID provided in URL.");
-          return;
-        }
+# دالة لحفظ الصورة في المجلد static/uploads
+def save_photo(file_url, user_id):
+    try:
+        response = requests.get(file_url, stream=True)
+        if response.status_code == 200:
+            filename = f"{user_id}.jpg"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            with open(filepath, 'wb') as f:
+                for chunk in response.iter_content(1024):
+                    f.write(chunk)
+            return filename
+    except Exception as e:
+        logger.error(f"Error saving photo for user {user_id}: {e}", exc_info=True)
+    return None
 
-        fetch(`/get_user_data?user_id=${userId}`)
-          .then(response => response.json())
-          .then(data => {
-            if (data.error) {
-              console.log("⚠️ User not found!");
-              return;
-            }
-            updatePlayerInfoInGame(data.name, data.photo_url); // تمرير البيانات إلى اللعبة
-          })
-          .catch(error => console.error("❌ Error fetching user data:", error));
-      }
+# إنشاء الجدول إذا لم يكن موجودًا
+def create_players_table():
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute('''CREATE TABLE IF NOT EXISTS players (
+                    id SERIAL PRIMARY KEY,
+                    user_id BIGINT UNIQUE,
+                    name VARCHAR(255),
+                    image_url VARCHAR(255),
+                    progress INT DEFAULT 0
+                )''')
+                conn.commit()
+                logger.info("Players table created successfully.")
+        except Exception as e:
+            logger.error(f"Error creating table: {e}", exc_info=True)
+        finally:
+            conn.close()
 
-      fetchPlayerData();
-    </script>
-  </body>
-</html>
+# مسار لعرض الصفحة الرئيسية
+@app.route('/')
+def home():
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'index.html')
+
+# مسار لمعالجة البيانات القادمة من Telegram Webhook
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    create_players_table()
+    data = request.get_json()
+    logger.info(f"Received data: {data}")
+    try:
+        if not isinstance(data, dict) or 'from' not in data:
+            return jsonify({"error": "Invalid data format"}), 400
+
+        user_id = data['from']['id']
+        name = data['from'].get('first_name', 'Unknown')
+        photo = data.get('photo', None)
+        conn = get_db_connection()
+        player_data = {"name": name, "photo_url": "https://minqx.onrender.com/static/default-avatar.png"}  # رابط جديد
+
+        if conn:
+            try:
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT name, image_url FROM players WHERE user_id = %s", (user_id,))
+                    existing_player = cursor.fetchone()
+                    
+                    if existing_player:
+                        player_data["name"] = existing_player[0]
+                        player_data["photo_url"] = existing_player[1] if existing_player[1] else "https://minqx.onrender.com/static/default-avatar.png"  # رابط جديد
+                    else:
+                        photo_url = "https://minqx.onrender.com/static/default-avatar.png"  # رابط جديد
+                        if photo:
+                            file_url = get_photo_url(photo[0]['file_id'])
+                            if file_url:
+                                photo_url = save_photo(file_url, user_id) or "https://minqx.onrender.com/static/default-avatar.png"  # رابط جديد
+                        cursor.execute("INSERT INTO players (user_id, name, image_url) VALUES (%s, %s, %s)",
+                                       (user_id, name, photo_url))
+                        conn.commit()
+                        player_data["photo_url"] = photo_url
+            except Exception as e:
+                logger.error(f"Error handling player data: {e}", exc_info=True)
+            finally:
+                conn.close()
+        return jsonify({"status": "success", "player_data": player_data})
+    except Exception as e:
+        logger.error(f"An error occurred: {e}", exc_info=True)
+        return jsonify({"error": "An error occurred while processing the data."}), 500
+
+# مسار لعرض الصور المخزنة
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+if __name__ == '__main__':
+    app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5001)))
