@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="static/TemplateData/style.css">
   </head>
   <body>
-    <!-- محتوى اللاعب في Unity -->
     <div id="unity-container" class="unity-desktop">
       <canvas id="unity-canvas" width="960" height="600" tabindex="-1"></canvas>
       <div id="unity-loading-bar">
@@ -25,7 +24,6 @@
       </div>
     </div>
 
-    <!-- معلومات اللاعب -->
     <div id="player-info">
       <img id="player-photo" src="static/default-avatar.png" alt="Player Photo" width="100" height="100">
       <p id="player-name">Loading...</p>
@@ -100,14 +98,18 @@
       };
       document.body.appendChild(script);
 
-      // تحديث بيانات اللاعب من السيرفر
       function updatePlayerInfo(playerName, playerPhotoUrl) {
-        document.getElementById('player-name').textContent = playerName;
-        document.getElementById('player-photo').src = playerPhotoUrl || 'static/default-avatar.png'; // إذا لم توجد صورة للاعب يتم استخدام الصورة الافتراضية
+        document.getElementById('player-name').textContent = playerName || "Unknown Player";
+        document.getElementById('player-photo').src = playerPhotoUrl || 'static/default-avatar.png';
       }
 
       function fetchPlayerData() {
-        let userId = "USER_ID";  // استبدل بـ ID المستخدم الفعلي
+        let userId = new URLSearchParams(window.location.search).get("user_id");
+        if (!userId) {
+          console.log("⚠️ No user ID provided in URL.");
+          return;
+        }
+
         fetch(`/get_user_data?user_id=${userId}`)
           .then(response => response.json())
           .then(data => {
@@ -120,7 +122,7 @@
           .catch(error => console.error("❌ Error fetching user data:", error));
       }
 
-      fetchPlayerData();  // جلب البيانات عند تحميل الصفحة
+      fetchPlayerData();
     </script>
   </body>
 </html>
