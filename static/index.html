@@ -98,11 +98,13 @@
       };
       document.body.appendChild(script);
 
+      // تحديث معلومات اللاعب
       function updatePlayerInfo(playerName, playerPhotoUrl) {
         document.getElementById('player-name').textContent = playerName || "Unknown Player";
         document.getElementById('player-photo').src = playerPhotoUrl || 'static/default-avatar.png';
       }
 
+      // جلب بيانات اللاعب من الخادم
       function fetchPlayerData() {
         let userId = new URLSearchParams(window.location.search).get("user_id");
         if (!userId) {
