@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
 import logging
@@ -14,11 +14,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # تحميل المتغيرات البيئية من Render
-SERVER_URL = os.environ.get("SERVER_URL", "https://minqx.onrender.com")  # تحديث رابط الخادم لRender
+SERVER_URL = os.environ.get("SERVER_URL", "https://minqx.onrender.com")
 TON_CONNECT_ENDPOINT = os.environ.get("TON_CONNECT_ENDPOINT", "/ton/connect")
 TON_STATUS_ENDPOINT = os.environ.get("TON_STATUS_ENDPOINT", "/ton/status")
 TON_DEEP_LINK = os.environ.get("TON_DEEP_LINK", "tonconnect://connect")
-MANIFEST_URL = os.environ.get("MANIFEST_URL", "https://minqx.onrender.com/tonconnect-manifest.json")  # تحديث رابط المانيفست
+MANIFEST_URL = os.environ.get("MANIFEST_URL", "https://your-site.com/tonconnect-manifest.json")
 
 # تخزين بيانات اللاعب والاتصالات
 player_data = {
@@ -40,6 +40,15 @@ def cleanup_connection(connection_id):
     if connection_id in active_connections:
         del active_connections[connection_id]
         logger.info(f"🧹 تم تنظيف اتصال: {connection_id}")
+
+# مسار الصفحة الرئيسية
+@app.route('/')
+def home():
+    return render_template('index.html')  # تأكد أن index.html موجود داخل مجلد templates
+
+@app.route('/favicon.ico')
+def favicon():
+    return app.send_static_file('favicon.ico')  # تأكد من أن favicon.ico موجود داخل مجلد static
 
 @app.route('/api/player', methods=['GET'])
 def get_player():
@@ -132,7 +141,7 @@ def handle_connection(connection_id):
             "message": str(e)
         }), 400
 
-# ✅ تشغيل الخادم
+# تشغيل الخادم
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
