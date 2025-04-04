@@ -14,11 +14,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # تحميل المتغيرات البيئية من Render
-SERVER_URL = os.environ.get("SERVER_URL", "https://your-server.com")
+SERVER_URL = os.environ.get("SERVER_URL", "https://minqx.onrender.com")  # تحديث رابط الخادم لRender
 TON_CONNECT_ENDPOINT = os.environ.get("TON_CONNECT_ENDPOINT", "/ton/connect")
 TON_STATUS_ENDPOINT = os.environ.get("TON_STATUS_ENDPOINT", "/ton/status")
 TON_DEEP_LINK = os.environ.get("TON_DEEP_LINK", "tonconnect://connect")
-MANIFEST_URL = os.environ.get("MANIFEST_URL", "https://your-site.com/tonconnect-manifest.json")
+MANIFEST_URL = os.environ.get("MANIFEST_URL", "https://minqx.onrender.com/tonconnect-manifest.json")  # تحديث رابط المانيفست
 
 # تخزين بيانات اللاعب والاتصالات
 player_data = {
