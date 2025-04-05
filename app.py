@@ -1,10 +1,11 @@
 from flask import Flask, request, jsonify
 from datetime import datetime
+from flask_cors import CORS
 import json
 
 app = Flask(__name__)
+CORS(app)  # تمكين CORS للاتصال من Unity
 
-# قاعدة بيانات مؤقتة لتخزين بيانات اللاعبين
 players_db = {}
 
 @app.route('/api/player', methods=['POST'])
@@ -12,25 +13,34 @@ def handle_player():
     try:
         data = request.json
         
-        # التحقق من البيانات المطلوبة
-        if not all(key in data for key in ['id', 'name', 'imageUrl']):
-            return jsonify({
-                "status": "error",
-                "message": "بيانات ناقصة. يرجى إرسال id و name و imageUrl"
-            }), 400
+        # إنشاء أو تحديث بيانات اللاعب
+        if 'id' not in data:
+            return jsonify({"status": "error", "message": "معرف اللاعب مطلوب"}), 400
+            
+        player_id = data['id']
         
-        # تخزين/تحديث بيانات اللاعب
-        players_db[data['id']] = {
-            "name": data['name'],
-            "imageUrl": data['imageUrl'],
-            "points": data.get('points', 0),
-            "lastUpdated": datetime.now().isoformat()
-        }
+        if player_id in players_db:
+            # تحديث البيانات الموجودة
+            players_db[player_id].update({
+                "name": data.get('name', players_db[player_id]['name']),
+                "imageUrl": data.get('imageUrl', players_db[player_id]['imageUrl']),
+                "points": data.get('points', players_db[player_id]['points']),
+                "lastUpdated": datetime.now().isoformat()
+            })
+        else:
+            # إنشاء لاعب جديد
+            players_db[player_id] = {
+                "id": player_id,
+                "name": data.get('name', f"Player_{player_id}"),
+                "imageUrl": data.get('imageUrl', "https://example.com/default_avatar.jpg"),
+                "points": data.get('points', 0),
+                "lastUpdated": datetime.now().isoformat()
+            }
         
         return jsonify({
             "status": "success",
             "message": "تم حفظ بيانات اللاعب",
-            "data": players_db[data['id']]
+            "data": players_db[player_id]
         })
         
     except Exception as e:
@@ -66,7 +76,7 @@ def handle_withdraw(player_id):
             "message": "النقاط غير كافية للسحب"
         }), 400
     
-    # تحديث النقاط
+    # تسجيل عملية السحب
     players_db[player_id]['points'] = 0
     players_db[player_id]['lastUpdated'] = datetime.now().isoformat()
     
