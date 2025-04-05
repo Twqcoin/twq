@@ -14,13 +14,6 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# تحميل المتغيرات البيئية من Render
-SERVER_URL = os.environ.get("SERVER_URL", "https://minqx.onrender.com")
-TON_CONNECT_ENDPOINT = os.environ.get("TON_CONNECT_ENDPOINT", "/ton/connect")
-TON_STATUS_ENDPOINT = os.environ.get("TON_STATUS_ENDPOINT", "/ton/status")
-TON_DEEP_LINK = os.environ.get("TON_DEEP_LINK", "tonconnect://connect")
-MANIFEST_URL = os.environ.get("MANIFEST_URL", "https://your-site.com/tonconnect-manifest.json")
-
 # Webhook URL
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "https://your-webhook-url.com")  # Webhook URL
 
@@ -111,7 +104,6 @@ def update_player():
             "status": "success",
             "message": "تم تحديث البيانات وإنشاء الاتصال",
             "connectionId": connection_id,
-            "deepLink": f"tg://wallet?startapp={connection_id}",
             "data": player_data
         })
         
