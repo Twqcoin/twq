@@ -4,10 +4,9 @@ from flask_cors import CORS
 import logging
 
 app = Flask(__name__)
-# تصحيح الخطأ الإملائي من "origins" إلى "origin" وإضافة دعم لجميع الطرق
 CORS(app, resources={
     r"/api/*": {
-        "origin": "*",
+        "origins": "*",
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type"]
     }
@@ -16,7 +15,7 @@ CORS(app, resources={
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# بيانات أولية للاعبين لتجنب 404 عند الاختبار
+# قاعدة بيانات أولية تحتوي على لاعب افتراضي
 players_db = {
     1: {
         "id": 1,
@@ -27,48 +26,6 @@ players_db = {
     }
 }
 
-@app.route('/api/player', methods=['POST', 'OPTIONS'])
-def handle_player():
-    if request.method == 'OPTIONS':
-        return _build_cors_preflight_response()
-    
-    try:
-        data = request.get_json()
-        if not data:
-            raise ValueError("لا توجد بيانات مرسلة")
-            
-        logger.info(f"بيانات الواردة: {data}")
-        
-        if 'id' not in data:
-            return jsonify({
-                "status": "error",
-                "message": "معرف اللاعب مطلوب"
-            }), 400
-            
-        player_id = data['id']
-        
-        players_db[player_id] = {
-            "id": player_id,
-            "name": data.get('name', f"Player_{player_id}"),
-            "imageUrl": data.get('imageUrl', "https://example.com/avatar.jpg"),
-            "points": data.get('points', 0),
-            "lastUpdated": datetime.now().isoformat()
-        }
-        
-        logger.info(f"تم حفظ بيانات اللاعب: {players_db[player_id]}")
-        
-        return jsonify({
-            "status": "success",
-            "data": players_db[player_id]
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"خطأ: {str(e)}", exc_info=True)
-        return jsonify({
-            "status": "error",
-            "message": "حدث خطأ في الخادم"
-        }), 500
-
 @app.route('/api/player/<int:player_id>', methods=['GET', 'OPTIONS'])
 def get_player(player_id):
     if request.method == 'OPTIONS':
@@ -78,19 +35,33 @@ def get_player(player_id):
         if player_id not in players_db:
             return jsonify({
                 "status": "error",
-                "message": "اللاعب غير موجود"
+                "message": "اللاعب غير موجود",
+                "data": None
             }), 404
+
+        player_data = players_db[player_id]
         
+        # ضمان وجود جميع الحقول المطلوبة
+        response_data = {
+            "id": player_data["id"],
+            "name": player_data.get("name", ""),
+            "imageUrl": player_data.get("imageUrl", ""),
+            "points": player_data.get("points", 0),
+            "lastUpdated": player_data.get("lastUpdated", "")
+        }
+
         return jsonify({
             "status": "success",
-            "data": players_db[player_id]
+            "message": "",
+            "data": response_data
         }), 200
-        
+
     except Exception as e:
-        logger.error(f"خطأ: {str(e)}", exc_info=True)
+        logger.error(f"خطأ في الخادم: {str(e)}", exc_info=True)
         return jsonify({
             "status": "error",
-            "message": "حدث خطأ في الخادم"
+            "message": "حدث خطأ في الخادم",
+            "data": None
         }), 500
 
 @app.route('/api/player/<int:player_id>/withdraw', methods=['POST', 'OPTIONS'])
@@ -102,30 +73,34 @@ def withdraw_points(player_id):
         if player_id not in players_db:
             return jsonify({
                 "status": "error",
-                "message": "اللاعب غير موجود"
+                "message": "اللاعب غير موجود",
+                "data": None
             }), 404
-        
+
         if players_db[player_id]['points'] < 1000:
             return jsonify({
                 "status": "error",
-                "message": "النقاط غير كافية للسحب"
+                "message": "النقاط غير كافية للسحب",
+                "data": None
             }), 400
-        
-        # تصحيح: خصم 1000 نقطة بدلاً من تعيينها للصفر
+
         players_db[player_id]['points'] -= 1000
         players_db[player_id]['lastUpdated'] = datetime.now().isoformat()
-        
+
         return jsonify({
             "status": "success",
             "message": "تم السحب بنجاح",
-            "new_balance": players_db[player_id]['points']
+            "data": {
+                "newPoints": players_db[player_id]['points']
+            }
         }), 200
-        
+
     except Exception as e:
-        logger.error(f"خطأ: {str(e)}", exc_info=True)
+        logger.error(f"خطأ في السحب: {str(e)}", exc_info=True)
         return jsonify({
             "status": "error",
-            "message": "حدث خطأ في الخادم"
+            "message": "حدث خطأ أثناء السحب",
+            "data": None
         }), 500
 
 def _build_cors_preflight_response():
