@@ -6,25 +6,49 @@ import logging
 from urllib.parse import urlparse
 import uuid
 from threading import Timer
-import requests  # لاستعمال مكتبة requests لإرسال البيانات إلى Webhook
+import requests
+from functools import wraps
 
+# تهيئة التطبيق
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
+# إعدادات التسجيل
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Webhook URL
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "https://your-webhook-url.com")  # Webhook URL
+# تهيئة قاعدة البيانات البسيطة
+class GameDatabase:
+    def __init__(self):
+        self.players = {}
+        self.connections = {}
+        
+    def add_player(self, player_id, data):
+        self.players[player_id] = data
+        
+    def get_player(self, player_id):
+        return self.players.get(player_id)
+        
+    def add_connection(self, conn_id, data):
+        self.connections[conn_id] = data
+        
+    def get_connection(self, conn_id):
+        return self.connections.get(conn_id)
 
-# تخزين بيانات اللاعب والاتصالات
-player_data = {
-    "name": "لاعب جديد",
-    "imageUrl": "https://via.placeholder.com/300",
-    "lastUpdated": None
-}
+db = GameDatabase()
 
-active_connections = {}
+# متغيرات البيئة
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "https://your-webhook-url.com")
+API_KEY = os.environ.get("API_KEY", "default-secret-key")
+
+# ديكورات المساعدة
+def require_api_key(view_function):
+    @wraps(view_function)
+    def decorated_function(*args, **kwargs):
+        if request.headers.get('X-API-KEY') != API_KEY:
+            return jsonify({"status": "error", "message": "غير مصرح به"}), 401
+        return view_function(*args, **kwargs)
+    return decorated_function
 
 def validate_image_url(url):
     try:
@@ -34,124 +58,132 @@ def validate_image_url(url):
         return False
 
 def cleanup_connection(connection_id):
-    if connection_id in active_connections:
-        del active_connections[connection_id]
-        logger.info(f"🧹 تم تنظيف اتصال: {connection_id}")
+    if db.get_connection(connection_id):
+        del db.connections[connection_id]
+        logger.info(f"تم تنظيف اتصال: {connection_id}")
 
 def send_to_webhook(data):
     try:
-        # إرسال البيانات إلى Webhook
-        response = requests.post(WEBHOOK_URL, json=data)
-        if response.status_code == 200:
-            logger.info("✅ تم إرسال البيانات إلى Webhook بنجاح.")
-        else:
-            logger.error(f"❌ فشل إرسال البيانات إلى Webhook: {response.status_code}")
+        response = requests.post(
+            WEBHOOK_URL, 
+            json=data,
+            headers={'Content-Type': 'application/json'},
+            timeout=5
+        )
+        response.raise_for_status()
+        logger.info("تم إرسال البيانات إلى Webhook بنجاح")
     except Exception as e:
-        logger.error(f"❌ خطأ في إرسال البيانات إلى Webhook: {str(e)}")
+        logger.error(f"خطأ في إرسال Webhook: {str(e)}")
 
-# مسار الصفحة الرئيسية
+# مسارات API
 @app.route('/')
 def home():
-    return render_template('index.html')  # تأكد أن index.html موجود داخل مجلد templates
+    return render_template('index.html')
 
-@app.route('/favicon.ico')
-def favicon():
-    return app.send_static_file('favicon.ico')  # تأكد من أن favicon.ico موجود داخل مجلد static
+@app.route('/api/health')
+def health_check():
+    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
 
 @app.route('/api/player', methods=['GET'])
+@require_api_key
 def get_player():
-    logger.info(f"📥 طلب GET - اللاعب: {player_data['name']}")
+    player_id = request.args.get('player_id')
+    if not player_id:
+        return jsonify({"status": "error", "message": "معرف اللاعب مطلوب"}), 400
+        
+    player = db.get_player(player_id)
+    if not player:
+        return jsonify({"status": "error", "message": "اللاعب غير موجود"}), 404
+        
     return jsonify({
         "status": "success",
-        "data": player_data,
+        "data": player,
         "timestamp": datetime.now().isoformat()
     })
 
-@app.route('/api/update', methods=['POST'])
+@app.route('/api/player/update', methods=['POST'])
+@require_api_key
 def update_player():
     try:
         data = request.get_json()
         
-        if not data or 'name' not in data:
-            raise ValueError("⚠️ يجب تقديم اسم اللاعب")
+        # التحقق من البيانات المطلوبة
+        required_fields = ['player_id', 'name']
+        if not all(field in data for field in required_fields):
+            return jsonify({"status": "error", "message": "بيانات ناقصة"}), 400
         
+        # التحقق من صحة صورة اللاعب
         image_url = data.get('imageUrl', '')
-        if not validate_image_url(image_url):
+        if image_url and not validate_image_url(image_url):
             image_url = "https://via.placeholder.com/300"
-            logger.warning("📷 تم استخدام صورة افتراضية")
+            logger.warning("تم استخدام صورة افتراضية")
         
-        connection_id = data.get('connectionId', str(uuid.uuid4()))
-        if connection_id:
-            active_connections[connection_id] = {
-                "status": "pending",
-                "player_name": data['name'],
-                "created_at": datetime.now()
-            }
-            Timer(1800, cleanup_connection, [connection_id]).start()
-        
-        player_data.update({
+        # إنشاء/تحديث بيانات اللاعب
+        player_data = {
+            "player_id": data['player_id'],
             "name": data['name'],
             "imageUrl": image_url,
-            "lastUpdated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        })
+            "lastUpdated": datetime.now().isoformat(),
+            "points": data.get('points', 0)
+        }
         
-        # إرسال البيانات إلى Webhook بعد التحديث
+        db.add_player(data['player_id'], player_data)
+        
+        # إنشاء اتصال جديد إذا لزم الأمر
+        if data.get('create_connection', False):
+            connection_id = str(uuid.uuid4())
+            db.add_connection(connection_id, {
+                "player_id": data['player_id'],
+                "status": "pending",
+                "created_at": datetime.now().isoformat()
+            })
+            Timer(1800, cleanup_connection, [connection_id]).start()
+            
+        # إرسال تحديث إلى Webhook
         send_to_webhook(player_data)
         
-        logger.info(f"✅ تم التحديث - اللاعب: {player_data['name']} | اتصال: {connection_id}")
+        logger.info(f"تم تحديث لاعب: {data['player_id']}")
         
         return jsonify({
             "status": "success",
-            "message": "تم تحديث البيانات وإنشاء الاتصال",
-            "connectionId": connection_id,
+            "message": "تم تحديث بيانات اللاعب",
             "data": player_data
         })
         
     except Exception as e:
-        logger.error(f"❌ خطأ في التحديث: {str(e)}")
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 400
+        logger.error(f"خطأ في تحديث اللاعب: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/connection/<connection_id>', methods=['GET', 'POST'])
+@require_api_key
 def handle_connection(connection_id):
     try:
+        connection = db.get_connection(connection_id)
+        if not connection:
+            return jsonify({"status": "error", "message": "الاتصال غير موجود"}), 404
+            
         if request.method == 'POST':
             data = request.get_json()
-            if connection_id in active_connections:
-                active_connections[connection_id].update({
-                    "status": data.get('status', 'pending'),
-                    "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                })
-                logger.info(f"🔄 تم تحديث الاتصال: {connection_id}")
-                return jsonify({
-                    "status": "success",
-                    "message": "تم تحديث حالة الاتصال",
-                    "data": active_connections[connection_id]
-                })
-            else:
-                raise ValueError("الاتصال غير موجود")
-        
-        if connection_id in active_connections:
-            return jsonify({
-                "status": "success",
-                "connection": active_connections[connection_id]
+            connection.update({
+                "status": data.get('status', connection['status']),
+                "updated_at": datetime.now().isoformat()
             })
-        else:
-            return jsonify({
-                "status": "error",
-                "message": "الاتصال غير موجود"
-            }), 404
-
-    except Exception as e:
-        logger.error(f"❌ خطأ في التعامل مع الاتصال: {str(e)}")
+            logger.info(f"تم تحديث اتصال: {connection_id}")
+            
         return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 400
+            "status": "success",
+            "data": connection
+        })
+        
+    except Exception as e:
+        logger.error(f"خطأ في معالجة الاتصال: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # تشغيل الخادم
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(
+        host='0.0.0.0',
+        port=port,
+        debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
+    )
