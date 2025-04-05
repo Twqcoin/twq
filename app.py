@@ -4,12 +4,28 @@ from flask_cors import CORS
 import logging
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+# تصحيح الخطأ الإملائي من "origins" إلى "origin" وإضافة دعم لجميع الطرق
+CORS(app, resources={
+    r"/api/*": {
+        "origin": "*",
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-players_db = {}
+# بيانات أولية للاعبين لتجنب 404 عند الاختبار
+players_db = {
+    1: {
+        "id": 1,
+        "name": "لاعب افتراضي",
+        "imageUrl": "https://example.com/avatar.jpg",
+        "points": 5000,
+        "lastUpdated": datetime.now().isoformat()
+    }
+}
 
 @app.route('/api/player', methods=['POST', 'OPTIONS'])
 def handle_player():
@@ -18,13 +34,16 @@ def handle_player():
     
     try:
         data = request.get_json()
+        if not data:
+            raise ValueError("لا توجد بيانات مرسلة")
+            
         logger.info(f"بيانات الواردة: {data}")
         
-        if not data or 'id' not in data:
-            return _corsify_response(jsonify({
+        if 'id' not in data:
+            return jsonify({
                 "status": "error",
                 "message": "معرف اللاعب مطلوب"
-            })), 400
+            }), 400
             
         player_id = data['id']
         
@@ -38,67 +57,83 @@ def handle_player():
         
         logger.info(f"تم حفظ بيانات اللاعب: {players_db[player_id]}")
         
-        return _corsify_response(jsonify({
+        return jsonify({
             "status": "success",
             "data": players_db[player_id]
-        }))
+        }), 200
         
     except Exception as e:
-        logger.error(f"خطأ: {str(e)}")
-        return _corsify_response(jsonify({
+        logger.error(f"خطأ: {str(e)}", exc_info=True)
+        return jsonify({
             "status": "error",
             "message": "حدث خطأ في الخادم"
-        })), 500
+        }), 500
 
 @app.route('/api/player/<int:player_id>', methods=['GET', 'OPTIONS'])
 def get_player(player_id):
     if request.method == 'OPTIONS':
         return _build_cors_preflight_response()
     
-    if player_id not in players_db:
-        return _corsify_response(jsonify({
+    try:
+        if player_id not in players_db:
+            return jsonify({
+                "status": "error",
+                "message": "اللاعب غير موجود"
+            }), 404
+        
+        return jsonify({
+            "status": "success",
+            "data": players_db[player_id]
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"خطأ: {str(e)}", exc_info=True)
+        return jsonify({
             "status": "error",
-            "message": "اللاعب غير موجود"
-        })), 404
-    
-    return _corsify_response(jsonify({
-        "status": "success",
-        "data": players_db[player_id]
-    }))
+            "message": "حدث خطأ في الخادم"
+        }), 500
 
 @app.route('/api/player/<int:player_id>/withdraw', methods=['POST', 'OPTIONS'])
 def withdraw_points(player_id):
     if request.method == 'OPTIONS':
         return _build_cors_preflight_response()
     
-    if player_id not in players_db:
-        return _corsify_response(jsonify({
+    try:
+        if player_id not in players_db:
+            return jsonify({
+                "status": "error",
+                "message": "اللاعب غير موجود"
+            }), 404
+        
+        if players_db[player_id]['points'] < 1000:
+            return jsonify({
+                "status": "error",
+                "message": "النقاط غير كافية للسحب"
+            }), 400
+        
+        # تصحيح: خصم 1000 نقطة بدلاً من تعيينها للصفر
+        players_db[player_id]['points'] -= 1000
+        players_db[player_id]['lastUpdated'] = datetime.now().isoformat()
+        
+        return jsonify({
+            "status": "success",
+            "message": "تم السحب بنجاح",
+            "new_balance": players_db[player_id]['points']
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"خطأ: {str(e)}", exc_info=True)
+        return jsonify({
             "status": "error",
-            "message": "اللاعب غير موجود"
-        })), 404
-    
-    if players_db[player_id]['points'] < 1000:
-        return _corsify_response(jsonify({
-            "status": "error",
-            "message": "النقاط غير كافية للسحب"
-        })), 400
-    
-    players_db[player_id]['points'] = 0
-    return _corsify_response(jsonify({
-        "status": "success",
-        "message": "تم السحب بنجاح"
-    }))
+            "message": "حدث خطأ في الخادم"
+        }), 500
 
 def _build_cors_preflight_response():
     response = jsonify({"status": "success"})
     response.headers.add("Access-Control-Allow-Origin", "*")
-    response.headers.add("Access-Control-Allow-Headers", "*")
-    response.headers.add("Access-Control-Allow-Methods", "*")
-    return response
-
-def _corsify_response(response):
-    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+    response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
     return response
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=True)
