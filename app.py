@@ -6,6 +6,7 @@ import logging
 from urllib.parse import urlparse
 import uuid
 from threading import Timer
+import requests  # لاستعمال مكتبة requests لإرسال البيانات إلى Webhook
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -19,6 +20,9 @@ TON_CONNECT_ENDPOINT = os.environ.get("TON_CONNECT_ENDPOINT", "/ton/connect")
 TON_STATUS_ENDPOINT = os.environ.get("TON_STATUS_ENDPOINT", "/ton/status")
 TON_DEEP_LINK = os.environ.get("TON_DEEP_LINK", "tonconnect://connect")
 MANIFEST_URL = os.environ.get("MANIFEST_URL", "https://your-site.com/tonconnect-manifest.json")
+
+# Webhook URL
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "https://your-webhook-url.com")  # Webhook URL
 
 # تخزين بيانات اللاعب والاتصالات
 player_data = {
@@ -40,6 +44,17 @@ def cleanup_connection(connection_id):
     if connection_id in active_connections:
         del active_connections[connection_id]
         logger.info(f"🧹 تم تنظيف اتصال: {connection_id}")
+
+def send_to_webhook(data):
+    try:
+        # إرسال البيانات إلى Webhook
+        response = requests.post(WEBHOOK_URL, json=data)
+        if response.status_code == 200:
+            logger.info("✅ تم إرسال البيانات إلى Webhook بنجاح.")
+        else:
+            logger.error(f"❌ فشل إرسال البيانات إلى Webhook: {response.status_code}")
+    except Exception as e:
+        logger.error(f"❌ خطأ في إرسال البيانات إلى Webhook: {str(e)}")
 
 # مسار الصفحة الرئيسية
 @app.route('/')
@@ -86,6 +101,9 @@ def update_player():
             "imageUrl": image_url,
             "lastUpdated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
+        
+        # إرسال البيانات إلى Webhook بعد التحديث
+        send_to_webhook(player_data)
         
         logger.info(f"✅ تم التحديث - اللاعب: {player_data['name']} | اتصال: {connection_id}")
         
