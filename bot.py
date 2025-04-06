@@ -11,7 +11,10 @@ from urllib.parse import urlparse
 load_dotenv()
 
 # إعداد تسجيل الأخطاء
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
 # إعداد اتصال بقاعدة بيانات PostgreSQL
@@ -44,59 +47,59 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "username": user.username if user.username else "لا يوجد اسم مستخدم",
     }
 
-    # استرجاع صورة البروفايل باستخدام API
     try:
         user_profile_photos = await update.effective_user.get_profile_photos()
         if user_profile_photos.total_count > 0:
-            # استخدام أول صورة تم العثور عليها
             photo_url = f"https://t.me/i/userpic/{user.id}_{user_profile_photos.photos[0][-1].file_id}.jpg"
         else:
-            photo_url = "https://example.com/default_avatar.jpg"  # صورة افتراضية إذا لم تكن هناك صورة
+            photo_url = "https://example.com/default_avatar.jpg"
     except Exception as e:
         logger.error(f"فشل في جلب صورة المستخدم: {e}")
-        photo_url = "https://example.com/default_avatar.jpg"  # صورة افتراضية إذا حدث خطأ
+        photo_url = "https://example.com/default_avatar.jpg"
 
     user_data["photo"] = photo_url
-    
-    # طباعة بيانات اللاعب للتحقق
     logger.info(f"البيانات المستلمة من اللاعب: {user_data}")
 
-    # الحصول على روابط من المتغيرات البيئية
-    bot_url = os.getenv("BOT_URL", "https://t.me/MinQX_Bot/MinQX")  # رابط البوت
-    app_url = os.getenv("APP_URL", "https://minqx.onrender.com")  # رابط التطبيق
+    bot_url = os.getenv("BOT_URL", "https://t.me/MinQX_Bot/MinQX")
+    app_url = os.getenv("APP_URL", "https://minqx.onrender.com")
 
-    # بناء رابط اللعبة
     game_url = f"{bot_url}?user_id={user_data['id']}&name={user_data['name']}&username={user_data['username']}&photo={user_data['photo']}"
     
-    # إعداد الزر الذي يحتوي على رابط اللعبة
     keyboard = [[InlineKeyboardButton("Start", url=game_url)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # إرسال رسالة الترحيب مع رابط اللعبة
     await update.message.reply_text("MINQX", reply_markup=reply_markup)
 
 # إعداد Webhook للبوت
 def set_webhook():
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    webhook_url = os.getenv("WEBHOOK_URL")  # تأكد من أن لديك URL البوت
-    # تأكد من أن webhook_url يحتوي على HTTPS
+    webhook_url = os.getenv("WEBHOOK_URL")
+    
+    if not webhook_url:
+        logger.error("WEBHOOK_URL غير موجود في المتغيرات البيئية.")
+        return
+
     if not webhook_url.startswith("https://"):
         logger.error("URL Webhook يجب أن يكون عبر HTTPS.")
         return
 
-    url = f"https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}/webhook"
-    response = requests.post(url)
-    if response.status_code == 200:
-        logger.info("تم إعداد Webhook بنجاح!")
-    else:
-        logger.error("فشل في إعداد Webhook")
+    try:
+        # اختبار اتصال بالرابط أولاً
+        test_response = requests.get(webhook_url, timeout=5)
+        if test_response.status_code != 200:
+            logger.error(f"الرابط غير متاح. حالة HTTP: {test_response.status_code}")
+            return
 
-# الحصول على معلومات Webhook
-def get_webhook_info():
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    url = f"https://api.telegram.org/bot{bot_token}/getWebhookInfo"
-    response = requests.get(url)
-    logger.info(response.json())
+        url = f"https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}/webhook"
+        response = requests.post(url)
+        
+        if response.status_code == 200:
+            logger.info("تم إعداد Webhook بنجاح!")
+            logger.info(response.json())
+        else:
+            logger.error(f"فشل في إعداد Webhook: {response.text}")
+    except Exception as e:
+        logger.error(f"حدث خطأ أثناء إعداد Webhook: {e}")
 
 # تشغيل البوت
 def main():
@@ -108,12 +111,24 @@ def main():
     # تعيين Webhook عند بدء التطبيق
     set_webhook()
 
-    # التحقق من Webhook الحالي
-    get_webhook_info()
-
     application = ApplicationBuilder().token(token).build()
     application.add_handler(CommandHandler("start", start))
-    application.run_webhook(listen="0.0.0.0", port=int(os.getenv("PORT", 5000)), url_path="/webhook")
+    
+    try:
+        # إعدادات Webhook المعدلة
+        application.run_webhook(
+            listen="0.0.0.0",
+            port=int(os.getenv("PORT", 10000)),  # Render يستخدم المنفذ 10000 افتراضياً
+            webhook_url=os.getenv("WEBHOOK_URL"),
+            url_path="/webhook",
+            cert=None,  # لا يوجد شهادة SSL مخصصة
+            drop_pending_updates=True  # تجاهل التحديثات القديمة
+        )
+    except Exception as e:
+        logger.error(f"فشل تشغيل البوت: {e}")
+        # جرب وضع Polling كحل بديل
+        logger.info("جرب تشغيل البوت في وضع Polling...")
+        application.run_polling()
 
 if __name__ == "__main__":
     main()
