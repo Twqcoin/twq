@@ -65,16 +65,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     game_url = f"https://t.me/MinQX_Bot/MinQX?user_id={user_data['id']}&name={user_data['name']}&username={user_data['username']}&photo={user_data['photo']}"
     
     # إعداد الزر الذي يحتوي على رابط اللعبة
-    keyboard = [[InlineKeyboardButton("Play Game", url=game_url)]]
+    keyboard = [[InlineKeyboardButton("Start", url=game_url)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     # إرسال رسالة الترحيب مع رابط اللعبة
-    await update.message.reply_text("مرحبًا! اضغط على الزر أدناه للعب:", reply_markup=reply_markup)
+    await update.message.reply_text("MINQX", reply_markup=reply_markup)
 
 # إعداد Webhook للبوت
 def set_webhook():
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
     webhook_url = os.getenv("WEBHOOK_URL")  # تأكد من أن لديك URL البوت
+    # تأكد من أن webhook_url يحتوي على HTTPS
+    if not webhook_url.startswith("https://"):
+        logger.error("URL Webhook يجب أن يكون عبر HTTPS.")
+        return
+
     url = f"https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}/webhook"
     response = requests.post(url)
     if response.status_code == 200:
