@@ -4,7 +4,6 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | minqx</title>
-    <!-- استخدام url_for لتحميل favicon من TemplateData -->
     <link rel="shortcut icon" href="{{ url_for('static', filename='TemplateData/favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='TemplateData/style.css') }}">
   </head>
@@ -51,13 +50,13 @@
         updateBannerVisibility();
       }
 
-      // إضافة Auth Token هنا
+      // تحديد المتغير authToken وتخزينه
       const authToken = "eyJhcHBfbmFtZSI6Im1pbnF4dG9rZW5fMjAyNSIsImFwcF91cmwiOiJodHRwczovL3QubWUvTWluUVhfQm90IiwiYXBwX2RvbWFpbiI6Imh0dHBzOi8vbWlucXgub25yZW5kZXIuY29tIn0=!6eOket5B3+I079/y4/MvZQEj5mQsTzwLGmdleHQhd1o=";
 
       // إرسال البيانات إلى Flask مع Auth Token
       function sendAnalyticsData() {
-        const url = "https://your-flask-server.com/analytics"; // رابط خادم Flask
-        const requestUrl = `${url}?token=${authToken}`;
+        const url = "https://minqx.onrender.com/analytics";  // رابط خادم Flask
+        const requestUrl = `${url}?token=${authToken}`;  // إضافة الـ Auth Token إلى الرابط
 
         fetch(requestUrl)
           .then(response => response.text())
@@ -92,7 +91,6 @@
         document.getElementsByTagName('head')[0].appendChild(meta);
         container.className = "unity-mobile";
         canvas.className = "unity-mobile";
-        // config.devicePixelRatio = 1;
       } else {
         canvas.style.width = "960px";
         canvas.style.height = "600px";
