@@ -70,65 +70,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text("MINQX", reply_markup=reply_markup)
 
-# إعداد Webhook للبوت
-def set_webhook():
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    webhook_url = os.getenv("WEBHOOK_URL")
-    
-    if not webhook_url:
-        logger.error("WEBHOOK_URL غير موجود في المتغيرات البيئية.")
-        return
-
-    if not webhook_url.startswith("https://"):
-        logger.error("URL Webhook يجب أن يكون عبر HTTPS.")
-        return
-
-    try:
-        # اختبار اتصال بالرابط أولاً
-        test_response = requests.get(webhook_url, timeout=5)
-        if test_response.status_code != 200:
-            logger.error(f"الرابط غير متاح. حالة HTTP: {test_response.status_code}")
-            return
-
-        url = f"https://api.telegram.org/bot{bot_token}/setWebhook?url={webhook_url}/webhook"
-        response = requests.post(url)
-        
-        if response.status_code == 200:
-            logger.info("تم إعداد Webhook بنجاح!")
-            logger.info(response.json())
-        else:
-            logger.error(f"فشل في إعداد Webhook: {response.text}")
-    except Exception as e:
-        logger.error(f"حدث خطأ أثناء إعداد Webhook: {e}")
-
-# تشغيل البوت
+# تشغيل البوت باستخدام Polling بدلاً من Webhook
 def main():
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
         logger.error("لم يتم العثور على رمز البوت في المتغيرات البيئية.")
         return
 
-    # تعيين Webhook عند بدء التطبيق
-    set_webhook()
-
+    # إعداد التطبيق للبوت
     application = ApplicationBuilder().token(token).build()
     application.add_handler(CommandHandler("start", start))
-    
+
     try:
-        # إعدادات Webhook المعدلة
-        application.run_webhook(
-            listen="0.0.0.0",
-            port=int(os.getenv("PORT", 10000)),  # Render يستخدم المنفذ 10000 افتراضياً
-            webhook_url=os.getenv("WEBHOOK_URL"),
-            url_path="/webhook",
-            cert=None,  # لا يوجد شهادة SSL مخصصة
-            drop_pending_updates=True  # تجاهل التحديثات القديمة
-        )
+        # تشغيل البوت باستخدام Polling
+        logger.info("تشغيل البوت باستخدام Polling...")
+        application.run_polling()
+
     except Exception as e:
         logger.error(f"فشل تشغيل البوت: {e}")
-        # جرب وضع Polling كحل بديل
-        logger.info("جرب تشغيل البوت في وضع Polling...")
-        application.run_polling()
 
 if __name__ == "__main__":
     main()
