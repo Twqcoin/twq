@@ -58,7 +58,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             photo_url = "https://example.com/default_avatar.jpg"
     except Exception as e:
         logger.error(f"خطأ في تحميل صورة المستخدم: {e}")
-        photo_url = "https://example.com/default_avatar.jpg"
+        photo_url = "https://github.com/Twqcoin/twq/tree/master/src/default_avatar.jpg"
 
     user_data["photo"] = photo_url
 
