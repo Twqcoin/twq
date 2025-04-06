@@ -1,7 +1,7 @@
 import os
 import logging
 import psycopg2
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
 from urllib.parse import urlparse
@@ -40,45 +40,43 @@ def get_db_connection():
 # تعريف الأمر /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    bot = context.bot
+
     user_data = {
         "id": user.id,
         "name": user.full_name,
-        "username": user.username if user.username else "No username",
+        "username": user.username if user.username else "no_username",
     }
 
+    # محاولة جلب صورة المستخدم
     try:
-        user_profile_photos = await update.effective_user.get_profile_photos()
-        if user_profile_photos.total_count > 0:
-            photo_url = f"https://t.me/i/userpic/{user.id}_{user_profile_photos.photos[0][-1].file_id}.jpg"
+        photos = await bot.get_user_profile_photos(user.id, limit=1)
+        if photos.total_count > 0:
+            photo_file = await bot.get_file(photos.photos[0][-1].file_id)
+            photo_url = photo_file.file_path
         else:
             photo_url = "https://example.com/default_avatar.jpg"
     except Exception as e:
-        logger.error(f"فشل في جلب صورة المستخدم: {e}")
+        logger.error(f"خطأ في تحميل صورة المستخدم: {e}")
         photo_url = "https://example.com/default_avatar.jpg"
 
     user_data["photo"] = photo_url
+
     logger.info(f"البيانات المستلمة من اللاعب: {user_data}")
 
     bot_url = os.getenv("BOT_URL", "https://t.me/MinQX_Bot/MinQX")
-    app_url = os.getenv("APP_URL", "https://minqx.onrender.com")
-
     game_url = f"{bot_url}?user_id={user_data['id']}&name={user_data['name']}&username={user_data['username']}&photo={user_data['photo']}"
 
-    keyboard = [[InlineKeyboardButton("🚀 Start Game", url=game_url)]]
+    keyboard = [[InlineKeyboardButton("Start", url=game_url)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # رابط مباشر للصورة (يمكنك تغييره إذا رفعتها في مكان آخر)
-    welcome_image_url = "https://minqx.onrender.com/static/welcome.png"  # ضع رابطك المباشر هنا إذا كنت مستضيفها
+    # إرسال الصورة مع الزر
+    if "https://" in photo_url or "http://" in photo_url:
+        await update.message.reply_photo(photo=photo_url, caption="👤 Welcome to MINQX", reply_markup=reply_markup)
+    else:
+        await update.message.reply_text("👤 Welcome to MINQX", reply_markup=reply_markup)
 
-    await update.message.reply_photo(
-        photo=welcome_image_url,
-        caption="Welcome to *MINQX*!\nEarn digital tokens, complete tasks, and rise to the top!",
-        parse_mode="Markdown"
-    )
-
-    await update.message.reply_text("Ready to begin your journey?", reply_markup=reply_markup)
-
-# تشغيل البوت باستخدام Polling
+# تشغيل البوت
 def main():
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
@@ -91,7 +89,6 @@ def main():
     try:
         logger.info("تشغيل البوت باستخدام Polling...")
         application.run_polling()
-
     except Exception as e:
         logger.error(f"فشل تشغيل البوت: {e}")
 
