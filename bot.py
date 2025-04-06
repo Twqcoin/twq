@@ -1,10 +1,9 @@
 import os
 import logging
 import psycopg2
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
-import requests
 from urllib.parse import urlparse
 
 # تحميل المتغيرات البيئية
@@ -44,7 +43,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_data = {
         "id": user.id,
         "name": user.full_name,
-        "username": user.username if user.username else "لا يوجد اسم مستخدم",
+        "username": user.username if user.username else "No username",
     }
 
     try:
@@ -64,25 +63,32 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     app_url = os.getenv("APP_URL", "https://minqx.onrender.com")
 
     game_url = f"{bot_url}?user_id={user_data['id']}&name={user_data['name']}&username={user_data['username']}&photo={user_data['photo']}"
-    
-    keyboard = [[InlineKeyboardButton("Start", url=game_url)]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text("MINQX", reply_markup=reply_markup)
 
-# تشغيل البوت باستخدام Polling بدلاً من Webhook
+    keyboard = [[InlineKeyboardButton("🚀 Start Game", url=game_url)]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    # رابط مباشر للصورة (يمكنك تغييره إذا رفعتها في مكان آخر)
+    welcome_image_url = "https://minqx.onrender.com/static/welcome.png"  # ضع رابطك المباشر هنا إذا كنت مستضيفها
+
+    await update.message.reply_photo(
+        photo=welcome_image_url,
+        caption="Welcome to *MINQX*!\nEarn digital tokens, complete tasks, and rise to the top!",
+        parse_mode="Markdown"
+    )
+
+    await update.message.reply_text("Ready to begin your journey?", reply_markup=reply_markup)
+
+# تشغيل البوت باستخدام Polling
 def main():
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
         logger.error("لم يتم العثور على رمز البوت في المتغيرات البيئية.")
         return
 
-    # إعداد التطبيق للبوت
     application = ApplicationBuilder().token(token).build()
     application.add_handler(CommandHandler("start", start))
 
     try:
-        # تشغيل البوت باستخدام Polling
         logger.info("تشغيل البوت باستخدام Polling...")
         application.run_polling()
 
