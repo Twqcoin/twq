@@ -29,7 +29,7 @@ players_db = {}
 def handle_player():
     if request.method == 'OPTIONS':
         return _build_cors_preflight_response()
-    
+
     try:
         data = request.get_json()
         logger.info(f"Request data: {data}")
@@ -40,10 +40,8 @@ def handle_player():
         player_id = data['id']
         
         if player_id in players_db:
-            # تحديث بيانات اللاعب بدلاً من إرجاع خطأ
-            players_db[player_id].update(data)
-            return _success_response("اللاعب موجود وتم تحديث بياناته بنجاح", players_db[player_id], 200)
-        
+            return _error_response("اللاعب موجود بالفعل", 409)
+
         # إنشاء لاعب جديد
         players_db[player_id] = {
             "id": player_id,
@@ -64,36 +62,12 @@ def handle_player():
 def get_player(player_id):
     if request.method == 'OPTIONS':
         return _build_cors_preflight_response()
-    
+
     try:
         if player_id not in players_db:
             return _error_response("اللاعب غير موجود", 404)
-        
+
         return _success_response("", players_db[player_id])
-
-    except Exception as e:
-        logger.error(f"Error: {str(e)}", exc_info=True)
-        return _error_response("حدث خطأ في الخادم", 500)
-
-@app.route('/api/player/<int:player_id>/withdraw', methods=['POST', 'OPTIONS'])
-def withdraw_points(player_id):
-    if request.method == 'OPTIONS':
-        return _build_cors_preflight_response()
-    
-    try:
-        if player_id not in players_db:
-            return _error_response("اللاعب غير موجود", 404)
-        
-        if players_db[player_id]['points'] < 1000:
-            return _error_response("النقاط غير كافية للسحب", 400)
-        
-        # عملية السحب
-        players_db[player_id]['points'] -= 1000
-        players_db[player_id]['lastUpdated'] = datetime.now().isoformat()
-        
-        return _success_response("تم السحب بنجاح", {
-            "newPoints": players_db[player_id]['points']
-        })
 
     except Exception as e:
         logger.error(f"Error: {str(e)}", exc_info=True)
