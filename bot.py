@@ -1,10 +1,11 @@
 import os
 import logging
 import psycopg2
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
 from urllib.parse import urlparse
+import httpx
 
 # تحميل المتغيرات البيئية
 load_dotenv()
@@ -37,6 +38,17 @@ def get_db_connection():
         logger.error(f"فشل الاتصال بقاعدة البيانات: {e}", exc_info=True)
         return None
 
+async def download_image(url):
+    """دالة مساعدة لتحميل الصورة من الرابط"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            return response.content
+    except Exception as e:
+        logger.error(f"فشل في تحميل الصورة من الرابط: {e}")
+        return None
+
 # تعريف الأمر /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -46,6 +58,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "id": user.id,
         "name": user.full_name,
         "username": user.username if user.username else "no_username",
+        "photo": None
     }
 
     # محاولة جلب صورة المستخدم
@@ -53,28 +66,52 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         photos = await bot.get_user_profile_photos(user.id, limit=1)
         if photos.total_count > 0:
             photo_file = await bot.get_file(photos.photos[0][-1].file_id)
-            photo_url = photo_file.file_path
-        else:
-            photo_url = "https://example.com/default_avatar.jpg"
+            user_data["photo"] = photo_file.file_id  # نستخدم file_id مباشرة بدلاً من الرابط
     except Exception as e:
         logger.error(f"خطأ في تحميل صورة المستخدم: {e}")
-        photo_url = "https://github.com/Twqcoin/twq/tree/master/src/default_avatar.jpg"
-
-    user_data["photo"] = photo_url
 
     logger.info(f"البيانات المستلمة من اللاعب: {user_data}")
 
     bot_url = os.getenv("BOT_URL", "https://t.me/MinQX_Bot/MinQX")
-    game_url = f"{bot_url}?user_id={user_data['id']}&name={user_data['name']}&username={user_data['username']}&photo={user_data['photo']}"
+    game_url = f"{bot_url}?user_id={user_data['id']}&name={user_data['name']}&username={user_data['username']}"
 
     keyboard = [[InlineKeyboardButton("Start", url=game_url)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # إرسال الصورة مع الزر
-    if "https://" in photo_url or "http://" in photo_url:
-        await update.message.reply_photo(photo=photo_url, caption="👤 Welcome to MINQX", reply_markup=reply_markup)
-    else:
-        await update.message.reply_text("👤 Welcome to MINQX", reply_markup=reply_markup)
+    # إرسال الرسالة مع الصورة أو بدونها
+    try:
+        if user_data["photo"]:
+            # استخدام file_id مباشرة
+            await update.message.reply_photo(
+                photo=user_data["photo"],
+                caption="👤 Welcome to MINQX",
+                reply_markup=reply_markup
+            )
+        else:
+            # إذا لم توجد صورة، استخدم صورة افتراضية من الملفات المحلية
+            try:
+                with open("assets/default_avatar.jpg", "rb") as photo:
+                    await update.message.reply_photo(
+                        photo=InputFile(photo),
+                        caption="👤 Welcome to MINQX",
+                        reply_markup=reply_markup
+                    )
+            except FileNotFoundError:
+                await update.message.reply_text(
+                    "👤 Welcome to MINQX",
+                    reply_markup=reply_markup
+                )
+    except Exception as e:
+        logger.error(f"خطأ في إرسال الرسالة الترحيبية: {e}")
+        # Fallback إلى إرسال نص فقط في حالة الفشل
+        await update.message.reply_text(
+            "👤 Welcome to MINQX",
+            reply_markup=reply_markup
+        )
+
+# معالج الأخطاء
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    logger.error(f"حدث خطأ أثناء معالجة التحديث: {context.error}", exc_info=context.error)
 
 # تشغيل البوت
 def main():
@@ -85,6 +122,7 @@ def main():
 
     application = ApplicationBuilder().token(token).build()
     application.add_handler(CommandHandler("start", start))
+    application.add_error_handler(error_handler)
 
     try:
         logger.info("تشغيل البوت باستخدام Polling...")
