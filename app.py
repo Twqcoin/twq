@@ -40,7 +40,9 @@ def handle_player():
         player_id = data['id']
         
         if player_id in players_db:
-            return _error_response("اللاعب موجود بالفعل", 409)
+            # تحديث بيانات اللاعب بدلاً من إرجاع خطأ
+            players_db[player_id].update(data)
+            return _success_response("اللاعب موجود وتم تحديث بياناته بنجاح", players_db[player_id], 200)
         
         # إنشاء لاعب جديد
         players_db[player_id] = {
