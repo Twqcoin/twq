@@ -62,7 +62,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"البيانات المستلمة من اللاعب: {user_data}")
 
     # بناء رابط اللعبة
-    game_url = f"https://twq-xzy4.onrender.com?user_id={user_data['id']}&name={user_data['name']}&username={user_data['username']}&photo={user_data['photo']}"
+    game_url = f"https://minqx.onrender.com?user_id={user_data['id']}&name={user_data['name']}&username={user_data['username']}&photo={user_data['photo']}"
     
     # إعداد الزر الذي يحتوي على رابط اللعبة
     keyboard = [[InlineKeyboardButton("Play Game", web_app={"url": game_url})]]
