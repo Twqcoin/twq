@@ -65,7 +65,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     game_url = f"https://t.me/MinQX_Bot/MinQX?user_id={user_data['id']}&name={user_data['name']}&username={user_data['username']}&photo={user_data['photo']}"
     
     # إعداد الزر الذي يحتوي على رابط اللعبة
-    keyboard = [[InlineKeyboardButton("Play Game", web_app={"url": game_url})]]
+    keyboard = [[InlineKeyboardButton("Play Game", url=game_url)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     # إرسال رسالة الترحيب مع رابط اللعبة
