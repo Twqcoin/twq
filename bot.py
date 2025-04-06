@@ -7,25 +7,25 @@ from dotenv import load_dotenv
 from urllib.parse import urlparse
 import httpx
 
-# تحميل المتغيرات البيئية
+# Load environment variables
 load_dotenv()
 
-# إعداد تسجيل الأخطاء
+# Setup logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# رابط صورة الترحيب من مستودع GitHub (استخدم الرابط RAW)
+# Welcome image URL from GitHub repository (using RAW link)
 WELCOME_IMAGE_URL = "https://raw.githubusercontent.com/Twqcoin/twq/master/src/default_avatar.jpg.png"
 
-# إعداد اتصال بقاعدة بيانات PostgreSQL
+# Database connection setup
 def get_db_connection():
     try:
         database_url = os.getenv("DATABASE_URL")
         if not database_url:
-            logger.error("DATABASE_URL غير موجود في المتغيرات البيئية.")
+            logger.error("DATABASE_URL not found in environment variables")
             return None
 
         result = urlparse(database_url)
@@ -38,21 +38,21 @@ def get_db_connection():
         )
         return conn
     except Exception as e:
-        logger.error(f"فشل الاتصال بقاعدة البيانات: {e}", exc_info=True)
+        logger.error(f"Failed to connect to database: {e}", exc_info=True)
         return None
 
 async def download_image(url):
-    """دالة مساعدة لتحميل الصورة من الرابط"""
+    """Helper function to download image from URL"""
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(url)
             response.raise_for_status()
             return response.content
     except Exception as e:
-        logger.error(f"فشل في تحميل الصورة من الرابط: {e}")
+        logger.error(f"Failed to download image from URL: {e}")
         return None
 
-# تعريف الأمر /start
+# /start command handler
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
 
@@ -62,7 +62,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "username": user.username if user.username else "no_username"
     }
 
-    logger.info(f"البيانات المستلمة من اللاعب: {user_data}")
+    logger.info(f"User data received: {user_data}")
 
     bot_url = os.getenv("BOT_URL", "https://t.me/MinQX_Bot/MinQX")
     game_url = f"{bot_url}?user_id={user_data['id']}&name={user_data['name']}&username={user_data['username']}"
@@ -70,39 +70,39 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("Start", url=game_url)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # إرسال صورة الترحيب من المستودع
+    # Send welcome image from repository
     try:
-        # تحميل الصورة من مستودع GitHub
+        # Download image from GitHub repository
         image_content = await download_image(WELCOME_IMAGE_URL)
         
         if image_content:
             await update.message.reply_photo(
                 photo=InputFile(image_content, filename="welcome.png"),
-                caption=f"🎉 أهلاً بك {user.first_name} في MINQX!",
+                caption=f"🎉 Welcome {user.first_name} to MINQX!",
                 reply_markup=reply_markup
             )
         else:
-            # إذا فشل تحميل الصورة، أرسل رسالة نصية
+            # If image download fails, send text message
             await update.message.reply_text(
-                f"🎉 أهلاً بك {user.first_name} في MINQX!",
+                f"🎉 Welcome {user.first_name} to MINQX!",
                 reply_markup=reply_markup
             )
     except Exception as e:
-        logger.error(f"خطأ في إرسال رسالة الترحيب: {e}")
+        logger.error(f"Error sending welcome message: {e}")
         await update.message.reply_text(
-            f"🎉 أهلاً بك {user.first_name} في MINQX!",
+            f"🎉 Welcome {user.first_name} to MINQX!",
             reply_markup=reply_markup
         )
 
-# معالج الأخطاء
+# Error handler
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
-    logger.error(f"حدث خطأ أثناء معالجة التحديث: {context.error}", exc_info=context.error)
+    logger.error(f"Error while processing update: {context.error}", exc_info=context.error)
 
-# تشغيل البوت
+# Start the bot
 def main():
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
-        logger.error("لم يتم العثور على رمز البوت في المتغيرات البيئية.")
+        logger.error("Bot token not found in environment variables")
         return
 
     application = ApplicationBuilder().token(token).build()
@@ -110,10 +110,10 @@ def main():
     application.add_error_handler(error_handler)
 
     try:
-        logger.info("تشغيل البوت باستخدام Polling...")
+        logger.info("Starting bot using polling...")
         application.run_polling(allowed_updates=Update.ALL_TYPES)
     except Exception as e:
-        logger.error(f"فشل تشغيل البوت: {e}")
+        logger.error(f"Failed to start bot: {e}")
 
 if __name__ == "__main__":
     main()
