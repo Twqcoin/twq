@@ -61,8 +61,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # طباعة بيانات اللاعب للتحقق
     logger.info(f"البيانات المستلمة من اللاعب: {user_data}")
 
+    # الحصول على روابط من المتغيرات البيئية
+    bot_url = os.getenv("BOT_URL", "https://t.me/MinQX_Bot/MinQX")  # رابط البوت
+    app_url = os.getenv("APP_URL", "https://minqx.onrender.com")  # رابط التطبيق
+
     # بناء رابط اللعبة
-    game_url = f"https://t.me/MinQX_Bot/MinQX?user_id={user_data['id']}&name={user_data['name']}&username={user_data['username']}&photo={user_data['photo']}"
+    game_url = f"{bot_url}?user_id={user_data['id']}&name={user_data['name']}&username={user_data['username']}&photo={user_data['photo']}"
     
     # إعداد الزر الذي يحتوي على رابط اللعبة
     keyboard = [[InlineKeyboardButton("Start", url=game_url)]]
