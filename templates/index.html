@@ -51,6 +51,27 @@
         updateBannerVisibility();
       }
 
+      // إضافة Auth Token هنا
+      const authToken = "eyJhcHBfbmFtZSI6Im1pbnF4dG9rZW5fMjAyNSIsImFwcF91cmwiOiJodHRwczovL3QubWUvTWluUVhfQm90IiwiYXBwX2RvbWFpbiI6Imh0dHBzOi8vbWlucXgub25yZW5kZXIuY29tIn0=!6eOket5B3+I079/y4/MvZQEj5mQsTzwLGmdleHQhd1o=";
+
+      // إرسال البيانات إلى Flask مع Auth Token
+      function sendAnalyticsData() {
+        const url = "https://your-flask-server.com/analytics"; // رابط خادم Flask
+        const requestUrl = `${url}?token=${authToken}`;
+
+        fetch(requestUrl)
+          .then(response => response.text())
+          .then(data => {
+            console.log("Data sent successfully:", data);
+          })
+          .catch(error => {
+            console.error("Error sending data:", error);
+          });
+      }
+
+      // استدعاء الدالة عند تحميل الصفحة أو عند حدث معين
+      window.onload = sendAnalyticsData;
+
       var buildUrl = "{{ url_for('static', filename='Build') }}";  // استخدام url_for للوصول إلى Build
       var loaderUrl = buildUrl + "/static.loader.js";
       var config = {
