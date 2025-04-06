@@ -5,7 +5,6 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
 from urllib.parse import urlparse
-from telegram.ext import Application
 
 # تحميل المتغيرات البيئية
 load_dotenv()
@@ -87,18 +86,9 @@ def main():
     application = ApplicationBuilder().token(token).build()
     application.add_handler(CommandHandler("start", start))
 
-    # إعداد Webhook للبوت
-    webhook_url = os.getenv("WEBHOOK_URL")
-    if not webhook_url:
-        logger.error("لم يتم تحديد URL الخاص بالـ Webhook.")
-        return
-
-    # إعداد Webhook
-    application.bot.set_webhook(webhook_url)
-
     try:
-        logger.info("تشغيل البوت باستخدام Webhook...")
-        application.run_webhook(listen="0.0.0.0", port=int(os.getenv("PORT", 5000)), url_path=token)
+        logger.info("تشغيل البوت باستخدام Polling...")
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
     except Exception as e:
         logger.error(f"فشل تشغيل البوت: {e}")
 
