@@ -6,6 +6,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
 import requests
 from urllib.parse import urlparse
+from flask import Flask, request
 
 # تحميل المتغيرات البيئية
 load_dotenv()
@@ -89,7 +90,17 @@ def get_webhook_info():
     response = requests.get(url)
     logger.info(response.json())
 
-# تشغيل البوت
+# إعداد Flask
+app = Flask(__name__)
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    json_str = request.get_data().decode('UTF-8')
+    update = Update.de_json(json_str, bot)
+    application.process_update(update)
+    return 'ok', 200
+
+# تشغيل البوت باستخدام Webhook
 def main():
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
@@ -104,7 +115,9 @@ def main():
 
     application = ApplicationBuilder().token(token).build()
     application.add_handler(CommandHandler("start", start))
-    application.run_polling()
+
+    # تشغيل Flask لتعامل مع Webhook
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
 
 if __name__ == "__main__":
     main()
