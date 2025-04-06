@@ -17,6 +17,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# رابط صورة الترحيب من مستودع GitHub (استخدم الرابط RAW)
+WELCOME_IMAGE_URL = "https://raw.githubusercontent.com/Twqcoin/twq/master/src/default_avatar.jpg.png"
+
 # إعداد اتصال بقاعدة بيانات PostgreSQL
 def get_db_connection():
     try:
@@ -52,23 +55,12 @@ async def download_image(url):
 # تعريف الأمر /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    bot = context.bot
 
     user_data = {
         "id": user.id,
         "name": user.full_name,
-        "username": user.username if user.username else "no_username",
-        "photo": None
+        "username": user.username if user.username else "no_username"
     }
-
-    # محاولة جلب صورة المستخدم
-    try:
-        photos = await bot.get_user_profile_photos(user.id, limit=1)
-        if photos.total_count > 0:
-            photo_file = await bot.get_file(photos.photos[0][-1].file_id)
-            user_data["photo"] = photo_file.file_id  # نستخدم file_id مباشرة بدلاً من الرابط
-    except Exception as e:
-        logger.error(f"خطأ في تحميل صورة المستخدم: {e}")
 
     logger.info(f"البيانات المستلمة من اللاعب: {user_data}")
 
@@ -78,34 +70,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("Start", url=game_url)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # إرسال الرسالة مع الصورة أو بدونها
+    # إرسال صورة الترحيب من المستودع
     try:
-        if user_data["photo"]:
-            # استخدام file_id مباشرة
+        # تحميل الصورة من مستودع GitHub
+        image_content = await download_image(WELCOME_IMAGE_URL)
+        
+        if image_content:
             await update.message.reply_photo(
-                photo=user_data["photo"],
-                caption="👤 Welcome to MINQX",
+                photo=InputFile(image_content, filename="welcome.png"),
+                caption=f"🎉 أهلاً بك {user.first_name} في MINQX!",
                 reply_markup=reply_markup
             )
         else:
-            # إذا لم توجد صورة، استخدم صورة افتراضية من الملفات المحلية
-            try:
-                with open("assets/default_avatar.jpg", "rb") as photo:
-                    await update.message.reply_photo(
-                        photo=InputFile(photo),
-                        caption="👤 Welcome to MINQX",
-                        reply_markup=reply_markup
-                    )
-            except FileNotFoundError:
-                await update.message.reply_text(
-                    "👤 Welcome to MINQX",
-                    reply_markup=reply_markup
-                )
+            # إذا فشل تحميل الصورة، أرسل رسالة نصية
+            await update.message.reply_text(
+                f"🎉 أهلاً بك {user.first_name} في MINQX!",
+                reply_markup=reply_markup
+            )
     except Exception as e:
-        logger.error(f"خطأ في إرسال الرسالة الترحيبية: {e}")
-        # Fallback إلى إرسال نص فقط في حالة الفشل
+        logger.error(f"خطأ في إرسال رسالة الترحيب: {e}")
         await update.message.reply_text(
-            "👤 Welcome to MINQX",
+            f"🎉 أهلاً بك {user.first_name} في MINQX!",
             reply_markup=reply_markup
         )
 
