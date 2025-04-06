@@ -51,10 +51,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # استخدام أول صورة تم العثور عليها
             photo_url = f"https://t.me/i/userpic/{user.id}_{user_profile_photos.photos[0][-1].file_id}.jpg"
         else:
-            photo_url = "https://raw.githubusercontent.com/Twqcoin/twq/master/src/images/welcome_image.jpg"  # الرابط المباشر للصورة من GitHub
+            photo_url = "https://example.com/default_avatar.jpg"  # صورة افتراضية إذا لم تكن هناك صورة
     except Exception as e:
         logger.error(f"فشل في جلب صورة المستخدم: {e}")
-        photo_url = "https://raw.githubusercontent.com/Twqcoin/twq/master/src/images/welcome_image.jpg"  # صورة افتراضية من GitHub إذا حدث خطأ
+        photo_url = "https://example.com/default_avatar.jpg"  # صورة افتراضية إذا حدث خطأ
 
     user_data["photo"] = photo_url
     
@@ -69,11 +69,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     # إرسال رسالة الترحيب مع رابط اللعبة
-    await update.message.reply_photo(
-        photo=photo_url,
-        caption="مرحبًا! اضغط على الزر أدناه للعب:",  # هذه الرسالة التي ستظهر مع الصورة
-        reply_markup=reply_markup
-    )
+    await update.message.reply_text("مرحبًا! اضغط على الزر أدناه للعب:", reply_markup=reply_markup)
 
 # إعداد Webhook للبوت
 def set_webhook():
@@ -108,7 +104,7 @@ def main():
 
     application = ApplicationBuilder().token(token).build()
     application.add_handler(CommandHandler("start", start))
-    application.run_polling()
+    application.run_webhook(listen="0.0.0.0", port=int(os.getenv("PORT", 5000)), url_path="/webhook")
 
 if __name__ == "__main__":
     main()
