@@ -1,5 +1,5 @@
 import os
-from telegram import Update
+from telegram import Update, InputMediaPhoto
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from database import SessionLocal, User, init_db
 
@@ -22,9 +22,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.commit()
     db.close()
 
-    # رسالة ترحيب مع رابط الجروب
-    welcome_msg = f"🎉 Welcome @{username} to MINQX!\n\nانضم إلى جروبنا هنا: https://t.me/minqx1official"
-    await update.message.reply_text(welcome_msg)
+    # الرابط الخاص بالصورة الافتراضية
+    avatar_url = "https://github.com/Twqcoin/twq/blob/master/src/default_avatar.jpg.png?raw=true"
+
+    # إرسال رسالة ترحيب مع صورة
+    welcome_message = f"🎉 Welcome @{username} to MINQX!\n\n"
+    welcome_message += "💥 You have joined our community! Keep completing tasks and earn rewards."
+
+    await update.message.reply_text(welcome_message)
+    await update.message.reply_photo(avatar_url)  # إرسال الصورة بعد الترحيب
 
 async def my_points(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -58,6 +64,6 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("points", my_points))
 app.add_handler(CommandHandler("top", leaderboard))
 
-# تشغيل البوت باستخدام polling
+# تشغيل البوت
 if __name__ == "__main__":
     app.run_polling()
