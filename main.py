@@ -1,7 +1,6 @@
 import os
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from telegram import InputMediaPhoto
 from database import SessionLocal, User, init_db
 
 TOKEN = os.environ.get("BOT_TOKEN")
@@ -14,9 +13,7 @@ init_db()
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username
-    first_name = update.effective_user.first_name or "لاعب"
 
-    # إضافة اللاعب إلى قاعدة البيانات إذا لم يكن موجوداً
     db = SessionLocal()
     user = db.query(User).filter_by(telegram_id=user_id).first()
     if not user:
@@ -25,17 +22,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.commit()
     db.close()
 
-    # إرسال صورة الترحيب
-    photo_url = "https://github.com/Twqcoin/twq/blob/master/src/default_avatar.jpg.png?raw=true"
-    welcome_message = (
-        f"🎉 Welcome {first_name} to MINQX!\n"
-        "انضم إلى جروبنا الرسمي للمزيد من التحديثات:\n"
-        "📢 https://t.me/minqx1official\n"
-        "استخدم /points لرؤية نقاطك، و /top لترتيب اللاعبين."
-    )
-    
-    # إرسال الصورة مع الرسالة
-    await update.message.reply_photo(photo=photo_url, caption=welcome_message)
+    # رسالة ترحيب مع رابط الجروب
+    welcome_msg = f"🎉 Welcome @{username} to MINQX!\n\nانضم إلى جروبنا هنا: https://t.me/minqx1official"
+    await update.message.reply_text(welcome_msg)
 
 async def my_points(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -69,6 +58,6 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("points", my_points))
 app.add_handler(CommandHandler("top", leaderboard))
 
-# تشغيل البوت
+# تشغيل البوت باستخدام polling
 if __name__ == "__main__":
     app.run_polling()
